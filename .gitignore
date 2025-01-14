@@ -10,3 +10,7 @@ __pycache__/
 
 # Ignore IDE-specific files (optional)
 .vscode/
+
+
+#Ignore credentials
+credentials.json
