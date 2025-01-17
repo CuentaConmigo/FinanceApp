@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .chart-container {
+            position: relative;
+            display: inline-block;
+            width: 50%;
+            height: 50%;
+        }
+        #spendingChart {
+            position: relative;
+            z-index: 1;
+        }
+        #totalDisplay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #555;
+            z-index: 2;
+        }
+        .home-link {
+            margin-top: 20px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spending Visualization</h1>
+
+    <h2>Spending by Category</h2>
+    <div class="chart-container">
+        <canvas id="spendingChart"></canvas>
+        <div id="totalDisplay"></div>
+    </div>
+
+    <h2>Spending by Month</h2>
+    <canvas id="monthlyChart"></canvas>
+
+    <a href="/" class="home-link">Back to Home</a>
+
+    <script>
+        // Data passed from Flask
+        const categories = {{ chartData['categories'] | safe }};
+        const categoryTotals = {{ chartData['totals'] | safe }};
+        const months = {{ barData['labels'] | safe }};
+        const monthlyTotals = {{ barData['totals'] | safe }};
+
+        // Format the total spending
+        const totalSpending = categoryTotals.reduce((sum, value) => sum + value, 0);
+        const formattedTotal = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(totalSpending);
+
+        // Update the total display
+        document.getElementById('totalDisplay').innerText = `$${formattedTotal}`;
+
+        // Pie Chart
+        const spendingCtx = document.getElementById('spendingChart').getContext('2d');
+        new Chart(spendingCtx, {
+            type: 'doughnut',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: categoryTotals,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                        '#FF9F40', '#E7E9ED', '#76D7C4', '#D98880', '#F7DC6F'
+                    ],
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                },
+                cutout: '60%', // Adjust for a larger inner radius
+            }
+        });
+
+        // Bar Chart
+        const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Monthly Spending',
+                    data: monthlyTotals,
+                    backgroundColor: '#36A2EB',
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value) => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(value),
+                        font: {
+                            size: 12
+                        },
+                        color: '#000'
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Total Spending'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    </script>
+</body>
+</html>
