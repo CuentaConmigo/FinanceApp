@@ -67,7 +67,7 @@ def main():
     messages = results.get('messages', [])
 
     # Load merchant categories into a dictionary for fast lookup
-    merchant_dict = load_merchant_categories('merchants_with_categories.txt')
+    merchant_dict = load_merchant_categories('cleaned_merchants_with_categories.txt')
 
     if not messages:
         print('No messages found.')

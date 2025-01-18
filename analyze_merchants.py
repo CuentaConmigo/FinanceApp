@@ -23,4 +23,4 @@ def analyze_txt_file(file_path):
     print(f"Number of unique subcategories: {unique_subcategories}")
 
 # Call the function with the path to your TXT file
-analyze_txt_file(r"C:\Users\simon\Documents\FinanceApp\merchants.txt")
+analyze_txt_file(r"C:\Users\simon\Documents\FinanceApp\cleaned_merchants_with_categories.txt")

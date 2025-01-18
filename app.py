@@ -13,8 +13,31 @@ def home():
     <p><a href="/visualization">View Spending Visualization</a></p>
     """
 
-@app.route('/transactions')
+@app.route('/transactions', methods=['GET', 'POST'])
 def show_transactions():
+    if request.method == 'POST':
+        # Handle updates from the form submission
+        merchant_id = request.form['merchant_id']
+        fixed_category = request.form['fixed_category']
+        fixed_sub_category = request.form['fixed_sub_category']
+        fixed_merchant_name = request.form['fixed_merchant_name']
+
+        # Update the LeanMerchant table
+        lean_merchant = session.query(LeanMerchant).filter_by(merchant_raw=merchant_id).first()
+        if lean_merchant:
+            lean_merchant.count += 1
+        else:
+            lean_merchant = LeanMerchant(
+                merchant_raw=merchant_id,
+                category=fixed_category,
+                sub_category=fixed_sub_category,
+                merchant_fixed=fixed_merchant_name,
+                count=1
+            )
+            session.add(lean_merchant)
+        session.commit()
+        return redirect(url_for('show_transactions'))
+
     # Fetch transactions joined with merchant data
     transactions = (
         session.query(Transaction, Merchant)
@@ -22,10 +45,13 @@ def show_transactions():
         .filter(Transaction.user_id == 1)  # Replace with dynamic user_id logic later
         .all()
     )
+    categories = [
+        "Restaurant", "Cafe", "Retail", "Grocery", "Transport",
+        "Health", "Education", "Entertainment", "Utilities", "Other"
+    ]
     print(f"Fetched transactions count: {len(transactions)}")
-    for transaction, merchant in transactions:
-        print(f"Transaction: {transaction}, Merchant: {merchant}")
-    return render_template('transactions.html', transactions=transactions)
+    return render_template('transactions.html', transactions=transactions, categories=categories)
+
 
 @app.route('/visualization')
 def spending_visualization():
