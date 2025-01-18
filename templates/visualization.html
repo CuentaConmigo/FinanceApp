@@ -1,143 +1,329 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spending Visualization</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        .chart-container {
-            position: relative;
-            display: inline-block;
-            width: 50%;
-            height: 50%;
-        }
-        #spendingChart {
-            position: relative;
-            z-index: 1;
-        }
-        #totalDisplay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #555;
-            z-index: 2;
-        }
-        .home-link {
-            margin-top: 20px;
-            display: block;
-        }
-    </style>
-</head>
-<body>
-    <h1>Spending Visualization</h1>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Spending Visualization</title>
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+        <style>
+            body {
+                font-family: 'Roboto', sans-serif;
+                text-align: center;
+                padding: 20px;
+                background: linear-gradient(135deg, #fdf6e4, #e4eefc); /* Light gradient for consistency */
+                color: #333; /* Dark text for contrast */            }
 
-    <h2>Spending by Category</h2>
+            .chart-container {
+                position: relative;
+                display: inline-block;
+                width: 840px; /* Increased width for larger visualization */
+                height: 840px; /* Increased height for larger visualization */
+            }
+            #sunburst-chart {
+                margin: 0 auto;
+            }
+            #totalDisplay {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 2em; /* Larger size for better emphasis */
+                font-weight: 500; /* Medium weight for better visibility */
+                color: #333; /* Darker shade for better contrast */
+                z-index: 2;
+            }
+            h1, h2 {
+                font-family: 'Roboto', sans-serif;
+                font-weight: 700; /* Bold for headings */
+                color: #333;
+            }
+            .home-link {
+                margin-top: 20px;
+                display: block;
+                text-decoration: none;
+                color: #007BFF; /* Bootstrap blue for links */
+                font-weight: 500;
+            }
+            .home-link:hover {
+                text-decoration: underline;
+            }
+            .tooltip {
+                position: absolute;
+                background-color: rgba(0, 0, 0, 0.8);
+                color: #fff;
+                padding: 10px;
+                border-radius: 5px;
+                pointer-events: none;
+                display: none;
+                font-size: 14px;
+                font-family: 'Roboto', sans-serif; /* Ensure consistent font */
+            }
+
+            .button-container {
+                margin-top: 20px;
+                display: flex;
+                justify-content: center;
+            }
+            .btn {
+                text-decoration: none;
+                font-size: 1.2rem;
+                font-weight: 500;
+                padding: 15px 30px;
+                border: 2px solid #333; /* Dark border for contrast */
+                border-radius: 30px;
+                background-color: rgba(51, 51, 51, 0.1); /* Subtle dark overlay */
+                color: #333; /* Dark text */
+                transition: all 0.3s ease;
+                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .btn:hover {
+                background-color: #333; /* Darker hover effect */
+                color: #fff; /* White text on hover */
+                box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
+            }
+        </style>
+    </head>
+    
+    
+<body>
+    <h1>Visualización de Gastos</h1>
+
+    <h2>Gastos por Categoría</h2>
     <div class="chart-container">
-        <canvas id="spendingChart"></canvas>
-        <div id="totalDisplay"></div>
+        <div id="sunburst-chart"></div>
+        <div id="totalDisplay">Total: ${{ totalSpending | int | tojson }}</div>
     </div>
 
-    <h2>Spending by Month</h2>
+    <h2>Gstos por Mes</h2>
     <canvas id="monthlyChart"></canvas>
 
-    <a href="/" class="home-link">Back to Home</a>
+    <div class="button-container">
+        <a href="/" class="btn">Back to Home</a>
+    </div>
 
     <script>
-        // Data passed from Flask
-        const categories = {{ chartData['categories'] | safe }};
-        const categoryTotals = {{ chartData['totals'] | safe }};
-        const months = {{ barData['labels'] | safe }};
-        const monthlyTotals = {{ barData['totals'] | safe }};
+        const sunburstData = {{ sunburstData | tojson }};
+        const barData = {{ barData | tojson }};
+        const totalSpending = {{ totalSpending | int | tojson }};
+        
+        const width = 840; // Increased width (600px * 1.4)
+        const radius = width / 2;
 
-        // Format the total spending
-        const totalSpending = categoryTotals.reduce((sum, value) => sum + value, 0);
-        const formattedTotal = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(totalSpending);
+        const svg = d3.select("#sunburst-chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", width)
+            .append("g")
+            .attr("transform", `translate(${radius},${radius})`);
+        
+        const partition = d3.partition().size([2 * Math.PI, radius]);
+        
+        const root = d3.hierarchy(sunburstData).sum(d => d.value);
+        partition(root);
+        
+        const arc = d3.arc()
+            .startAngle(d => d.x0)
+            .endAngle(d => d.x1)
+            .innerRadius(d => d.y0)
+            .outerRadius(d => d.y1);
 
-        // Update the total display
-        document.getElementById('totalDisplay').innerText = `$${formattedTotal}`;
+        const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
-        // Pie Chart
-        const spendingCtx = document.getElementById('spendingChart').getContext('2d');
-        new Chart(spendingCtx, {
-            type: 'doughnut',
-            data: {
-                labels: categories,
-                datasets: [{
-                    data: categoryTotals,
-                    backgroundColor: [
-                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-                        '#FF9F40', '#E7E9ED', '#76D7C4', '#D98880', '#F7DC6F'
-                    ],
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    }
-                },
-                cutout: '60%', // Adjust for a larger inner radius
-            }
-        });
+        const paths = svg.selectAll("path")
+            .data(root.descendants())
+            .enter()
+            .append("path")
+            .attr("d", arc)
+            .style("fill", d => {
+                if (d.depth === 1) return colorScale(d.data.name); // Use Tableau10 for category colors
+                if (d.depth === 2) {
+                    const siblings = d.parent.children; // Get all subcategories of the parent
+                    const index = siblings.indexOf(d); // Determine the index of the current subcategory
+                    const ratio = index / siblings.length; // Spread the shades proportionally
+                    return d3.interpolateLab(colorScale(d.parent.data.name), "#ffffff")(0.4 + ratio * 0.5); // Generate distinct shades
+                }
+                return "#fff"; // Default color for root
+            })
+            .style("opacity", d => d.depth === 2 ? 0 : 1) // Hide subcategories by default
+            .on("mouseover", function (event, d) {
+                if (d.depth === 1 || d.depth === 2) {
+                    // Show subcategory fillings and labels for the hovered category
+                    svg.selectAll("path")
+                        .filter(p => p.parent === d || p === d)
+                        .style("opacity", 1);
 
-        // Bar Chart
+                    svg.selectAll("text")
+                        .filter(p => p === d || p.parent === d)
+                        .style("display", "block");
+
+                    // Update the total display in the center
+                    const totalText = d.depth === 1 
+                        ? `${d.data.name}<br> $${d.value.toLocaleString('es-CL')}`
+                        : `${d.data.name}<br>$${d.value.toLocaleString('es-CL')}`;
+                    d3.select("#totalDisplay").html(totalText);
+                }
+            })
+            .on("mouseout", function (event, d) {
+                if (d.depth === 1 || d.depth === 2) {
+                    // Hide subcategory fillings and labels
+                    svg.selectAll("path")
+                        .filter(p => p.depth === 2) // Only hide subcategories
+                        .style("opacity", 0);
+
+                    svg.selectAll("text")
+                        .filter(p => p.depth === 2) // Hide subcategory labels
+                        .style("display", "none");
+
+                    // Reset the total display to overall total
+                    d3.select("#totalDisplay").html(`Total<br>$${totalSpending.toLocaleString('es-CL')}`);
+                }
+            });
+
+            
+
+            svg.selectAll("text")
+            .data(root.descendants())
+            .enter()
+            .append("text")
+            .attr("transform", d => {
+                const x = arc.centroid(d)[0];
+                const y = arc.centroid(d)[1];
+                return `translate(${x}, ${y})`;
+            })
+            .attr("dy", "0.35em")
+            .attr("text-anchor", "middle")
+            .text(d => d.depth > 0 ? d.data.name : "")
+            .style("font-size", d => (d.depth === 1 ? "14px" : "12px")) // Slightly larger for categories
+            .style("font-weight", "500") // Medium weight for better readability
+            .style("fill", "#333") // Darker text for better contrast
+            .style("font-family", "'Roboto', sans-serif") // Apply Google Font
+            .style("display", d => d.depth > 0 ? "block" : "none");
+
+
+
+
         const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
         new Chart(monthlyCtx, {
             type: 'bar',
             data: {
-                labels: months,
+                labels: barData.labels,
                 datasets: [{
                     label: 'Monthly Spending',
-                    data: monthlyTotals,
-                    backgroundColor: '#36A2EB',
+                    data: barData.totals,
+                    backgroundColor: function (context) {
+                        const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, context.chart.height);
+                        gradient.addColorStop(0, '#4bc0c0'); // Light green
+                        gradient.addColorStop(1, '#36a2eb'); // Blue
+                        return gradient;
+                    },
+                    hoverBackgroundColor: '#4bc0c0', // Highlight color on hover
+                    borderRadius: 5, // Rounded corners
                 }]
             },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: {
-                        display: false
+                    legend: { display: false }, // Hide legend
+                    tooltip: {
+                        backgroundColor: '#333',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        cornerRadius: 4,
+                        xPadding: 10,
+                        yPadding: 10,
+                        titleFont: {
+                            family: 'Roboto',
+                            size: 16,
+                            weight: '500',
+                        },
+                        bodyFont: {
+                            family: 'Roboto',
+                            size: 14,
+                            weight: '400',
+                }
                     },
                     datalabels: {
                         anchor: 'end',
-                        align: 'top',
-                        formatter: (value) => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(value),
+                        align: 'end',
+                        formatter: value => `$${value.toLocaleString('es-CL')}`, // Format values
+                        color: '#333',
                         font: {
-                            size: 12
-                        },
-                        color: '#000'
+                            family: 'Roboto',
+                            size: 16,
+                            weight: '500',
+                        }
                     }
+
                 },
                 scales: {
                     x: {
                         title: {
                             display: true,
-                            text: 'Month'
+                            text: 'Mes',
+                            color: '#333',
+                            font: {
+                                family: 'Roboto',
+                                size: 16,
+                                weight: '700',
+                            }
+                        },
+
+                        ticks: {
+                            color: '#333', // Darker text for better contrast
+                            font: {
+                                family: 'Roboto',
+                                size: 14, // Increase font size
+                                weight: '500', // Medium weight
+                            }
+                        },
+                        grid: {
+                            display: false // Remove gridlines
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'Total Spending'
+                            text: 'Gasto Total',
+                            color: '#555',
+                            font: {
+                                family: 'Roboto',
+                                size: 14,
+                                weight: '700',
+                            }
                         },
-                        beginAtZero: true
+                        ticks: {
+                            color: '#333',
+                            font: {
+                                family: 'Roboto',
+                                size: 14,
+                                weight: '500',
+                            },
+                            callback: value => `$${value.toLocaleString('es-CL')}` // Format values
+                        },
+                        grid: {
+                            display: false // Remove gridlines
+                        }
+
+
                     }
+                },
+                layout: {
+                    padding: 20 // Add padding for a cleaner layout
+                },
+                animation: {
+                    duration: 800, // Smooth animations
+                    easing: 'easeOutBounce'
                 }
             },
-            plugins: [ChartDataLabels]
+            plugins: [ChartDataLabels] // Ensure DataLabels plugin is active
         });
+
+
+
     </script>
 </body>
 </html>

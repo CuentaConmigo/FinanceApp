@@ -8,6 +8,8 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background: linear-gradient(135deg, #fdf6e4, #e4eefc); /* Light gradient for consistency */
+            color: #333; /* Dark text for contrast */
         }
         h1 {
             color: #333;
@@ -37,6 +39,10 @@
         .home-link:hover {
             text-decoration: underline;
         }
+        /* Highlight verified rows */
+        .verified {
+            background-color: #d4edda;
+        }
     </style>
 </head>
 <body>
@@ -51,6 +57,9 @@
                     <th>Date</th>
                     <th>Merchant</th>
                     <th>Amount</th>
+                    <th>Current Category</th>
+                    <th>Current Sub-Category</th>
+                    <th>Current Fixed Merchant</th>
                     <th>Category</th>
                     <th>Sub-Category</th>
                     <th>Fixed Merchant</th>
@@ -59,22 +68,30 @@
             </thead>
             <tbody>
                 {% for transaction, merchant in transactions %}
-                <tr>
+                <tr class="{% if transaction.merchant_fixed %}verified{% endif %}">
                     <td>{{ transaction.date }}</td>
                     <td>{{ merchant.merchant_name }}</td>
                     <td>${{ transaction.amount }}</td>
+                    <!-- Display current values -->
+                    <td>{{ transaction.category or 'Uncategorized' }}</td>
+                    <td>{{ transaction.sub_category or 'Uncategorized' }}</td>
+                    <td>{{ transaction.merchant_fixed or 'Unverified' }}</td>
+                    <!-- Editable dropdowns and inputs -->
                     <td>
-                        <select name="fixed_category">
+                        <select name="fixed_category_{{ merchant.merchant_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}">
+                            <option value="" selected>Select a Category</option>
                             {% for category in categories %}
                             <option value="{{ category }}">{{ category }}</option>
                             {% endfor %}
                         </select>
                     </td>
                     <td>
-                        <input type="text" name="fixed_sub_category" placeholder="Sub-category">
+                        <select name="fixed_sub_category_{{ merchant.merchant_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}">
+                            <option value="" selected>Select a Sub-category</option>
+                        </select>
                     </td>
                     <td>
-                        <input type="text" name="fixed_merchant_name" placeholder="Merchant Name">
+                        <input type="text" name="fixed_merchant_name_{{ merchant.merchant_id }}" value="{{ merchant.merchant_name }}">
                     </td>
                     <td>
                         <button type="submit" name="merchant_id" value="{{ merchant.merchant_id }}">Update</button>
@@ -87,5 +104,32 @@
     {% else %}
     <p>No transactions found.</p>
     {% endif %}
+
+    <script>
+        // Define categories and their respective subcategories
+        const categoryMap = {{ category_map | tojson }};
+
+        // Function to dynamically update subcategories based on the selected category
+        document.querySelectorAll('.category-dropdown').forEach(categoryDropdown => {
+            categoryDropdown.addEventListener('change', function () {
+                const rowIndex = this.getAttribute('data-row');
+                const selectedCategory = this.value;
+                const subcategoryDropdown = document.getElementById(`subcategory-${rowIndex}`);
+                
+                // Clear current subcategories
+                subcategoryDropdown.innerHTML = '<option value="" selected>Select a Sub-category</option>';
+
+                // Populate subcategories for the selected category
+                if (categoryMap[selectedCategory]) {
+                    categoryMap[selectedCategory].forEach(subcategory => {
+                        const option = document.createElement('option');
+                        option.value = subcategory;
+                        option.textContent = subcategory;
+                        subcategoryDropdown.appendChild(option);
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>

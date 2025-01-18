@@ -14,3 +14,5 @@ __pycache__/
 
 #Ignore credentials
 credentials.json
+
+cleaned_merchants_with_categories.txt
