@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparación de Gasto</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Ensure consistent box sizing */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #fdf6e4, #e4eefc);
+            color: #333;
+            margin: 0;
+        }
+
+        h1, h2 {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            width: 80%;
+            max-width: 1000px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        /* Explicit height for canvas */
+        .chart-container canvas {
+            height: 500px !important; /* Ensure consistent height for canvas */
+            width: 100% !important;
+        }
+
+        .button-container {
+            margin-top: 60px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn {
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 500;
+            padding: 15px 30px;
+            border: 2px solid #333;
+            border-radius: 30px;
+            background-color: rgba(51, 51, 51, 0.1);
+            color: #333;
+            transition: all 0.3s ease;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            background-color: #333;
+            color: #fff;
+            box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>Comparación de Gasto</h1>
+
+    <!-- Chart for similar users by age -->
+    <div class="chart-container">
+        <h2>Comparación con Usuarios Similares (Edad {{ age_range }})</h2>
+        <canvas id="ageBenchmarkChart"></canvas>
+    </div>
+
+    <!-- Chart for all users -->
+    <div class="chart-container">
+        <h2>Comparación con el Promedio General</h2>
+        <canvas id="overallBenchmarkChart"></canvas>
+    </div>
+
+    <div class="button-container">
+        <a href="/" class="btn">Menú de Inicio</a>
+    </div>
+
+    <script>
+        const userSpending = {{ user_spending | tojson }};
+        const groupAverages = {{ group_averages | tojson }};
+        const allUsersAverages = {{ all_users_averages | tojson }};
+        const categories = Object.keys(userSpending);
+    
+        function getColors(deviations) {
+            return deviations.map(value => value >= 0 ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)');
+        }
+    
+        // Render chart for similar users
+        const ageCtx = document.getElementById('ageBenchmarkChart').getContext('2d');
+        const groupDeviations = categories.map(cat => userSpending[cat] - groupAverages[cat]);
+        new Chart(ageCtx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [{
+                    label: 'Diferencia (Usuario vs Promedio de Edad)',
+                    data: groupDeviations,
+                    backgroundColor: getColors(groupDeviations),
+                    borderColor: getColors(groupDeviations),
+                    borderWidth: 1,
+                    borderRadius: 5, // Add rounded corners
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true, // Ensure consistent aspect ratio
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#333',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        cornerRadius: 4,
+                    },
+                },
+                layout: {
+                    padding: { top: 20, right: 20, bottom: 20, left: 20 },
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Diferencia en Gasto (CLP)', color: '#555' },
+                        grid: { color: '#ddd' },
+                        ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                    },
+                    y: {
+                        title: { display: true, text: 'Categorías', color: '#333' },
+                        grid: { display: false },
+                        ticks: { color: '#333', font: { size: 12, family: 'Roboto' } },
+                    }
+                },
+            },
+        });
+    
+        // Render chart for all users
+        const overallCtx = document.getElementById('overallBenchmarkChart').getContext('2d');
+        const overallDeviations = categories.map(cat => userSpending[cat] - allUsersAverages[cat]);
+        new Chart(overallCtx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [{
+                    label: 'Diferencia (Usuario vs Promedio General)',
+                    data: overallDeviations,
+                    backgroundColor: getColors(overallDeviations),
+                    borderColor: getColors(overallDeviations),
+                    borderWidth: 1,
+                    borderRadius: 5, // Add rounded corners
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true, // Ensure consistent aspect ratio
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#333',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        cornerRadius: 4,
+                    },
+                },
+                layout: {
+                    padding: { top: 20, right: 20, bottom: 20, left: 20 },
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Diferencia en Gasto (CLP)', color: '#555' },
+                        grid: { color: '#ddd' },
+                        ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                    },
+                    y: {
+                        title: { display: true, text: 'Categorías', color: '#333' },
+                        grid: { display: false },
+                        ticks: { color: '#333', font: { size: 12, family: 'Roboto' } },
+                    }
+                },
+            },
+        });
+    </script>
+    
+</body>
+</html>

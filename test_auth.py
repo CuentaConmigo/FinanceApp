@@ -8,7 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from database_setup import session, Transaction, Merchant
+from database_setup import session, Transaction, Merchant, UserCharacteristic, LeanMerchant
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
@@ -19,23 +19,43 @@ def load_merchant_categories(file_path):
     return merchant_dict
 
 def extract_transaction_details(email_body):
+    """
+    Extract transaction details from the email body.
+    Focuses only on the portion of the email after the phrase 'compra por'.
+    """
+    # Find the starting index of the relevant portion
+    start_index = email_body.find('compra por')
+
+    # If 'compra por' is not found, return None (irrelevant email)
+    if start_index == -1:
+        return None
+
+    # Extract the portion of the email starting from 'compra por'
+    relevant_body = email_body[start_index:]
+
     # Regular expression patterns to find cost, merchant, and date
     cost_pattern = r"compra por (\$\d+\.?\d*)"
     merchant_pattern = r"en (.*?) el"
     date_pattern = r"el (\d{2}/\d{2}/\d{4} \d{2}:\d{2})"
 
-    cost = re.search(cost_pattern, email_body)
-    merchant = re.search(merchant_pattern, email_body)
-    date = re.search(date_pattern, email_body)
-    
+    cost = re.search(cost_pattern, relevant_body)
+    merchant = re.search(merchant_pattern, relevant_body)
+    date = re.search(date_pattern, relevant_body)
+
+    # If any of the required fields are missing, return None
+    if not cost or not merchant or not date:
+        return None
+
     # Handle amount formatting (e.g., "33.000" -> "33000")
-    cost_value = cost.group(1).replace('.', '').replace('$', '') if cost else '0'
-    
+    cost_value = cost.group(1).replace('.', '').replace('$', '')
+
+    # Return extracted details
     return {
         'Cost': float(cost_value),  # Convert cleaned value to float
-        'Merchant': merchant.group(1) if merchant else None,
-        'Date': date.group(1) if date else None
+        'Merchant': merchant.group(1),
+        'Date': date.group(1)
     }
+
 
 def find_best_match(merchant_name, merchant_dict, threshold=90):
     """
@@ -63,10 +83,25 @@ def main():
             pickle.dump(creds, token)
 
     service = build('gmail', 'v1', credentials=creds)
+
+    # Get the user's email address
+    profile = service.users().getProfile(userId='me').execute()
+    user_email = profile['emailAddress']
+
+    # Check if the user already exists in the `user_characteristic` table
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        # Add the user if they don't exist
+        user = UserCharacteristic(email=user_email)
+        session.add(user)
+        session.commit()
+
+    user_id = user.user_id  # Get the user's ID
+
     results = service.users().messages().list(userId='me', q='from:simon_gaucho@hotmail.com').execute()
     messages = results.get('messages', [])
 
-    # Load merchant categories into a dictionary for fast lookup
+    # Load merchant categories into a dictionary for fallback matching
     merchant_dict = load_merchant_categories('cleaned_merchants_with_categories.txt')
 
     if not messages:
@@ -77,32 +112,79 @@ def main():
             snippet = msg['snippet']
             transaction_details = extract_transaction_details(snippet)
 
-            # Find the merchant and its category using RapidFuzz
-            merchant_name = transaction_details['Merchant']
-            matched_merchant, merchant_category = find_best_match(merchant_name, merchant_dict, threshold=90)
+            # Skip emails that don't have complete transaction details
+            if not transaction_details:
+                print(f"Email skipped: Missing transaction details. Snippet: {snippet}")
+                continue  # Move to the next email
 
-            # Use the email merchant name but add the matched category
+            merchant_name = transaction_details['Merchant']
+
+            # Step 1: Check for an exact match in LeanMerchant
             merchant = session.query(Merchant).filter_by(merchant_name=merchant_name).first()
-            if not merchant:
-                merchant = Merchant(merchant_name=merchant_name, category=merchant_category)
-                session.add(merchant)
-                session.commit()  # Create new merchant if not found
+
+            if merchant:  # Check if the merchant exists
+                merchant_id = merchant.merchant_id
+                # Step 2: Query LeanMerchant with merchant_id
+                lean_merchant = session.query(LeanMerchant).filter_by(merchant_raw=merchant_id).first()
+            else:
+                print(f"Merchant name '{merchant_name}' not found in the database.")
+                lean_merchant = None
+
+
+            if lean_merchant:
+                # Use the verified LeanMerchant data
+                category = lean_merchant.category
+                sub_category = lean_merchant.sub_category
+                merchant_fixed = lean_merchant.merchant_fixed
+                merchant_id = lean_merchant.merchant_raw  # Use the Merchant ID from LeanMerchant
+            else:
+                # Step 2: Fall back to finding the best match in the Merchant table
+                matched_merchant, merchant_category = find_best_match(merchant_name, merchant_dict, threshold=90)
+
+                # Add a new merchant to the Merchant table if it doesn't exist
+                merchant = session.query(Merchant).filter_by(merchant_name=merchant_name).first()
+                if not merchant:
+                    merchant = Merchant(merchant_name=merchant_name, category=merchant_category)
+                    session.add(merchant)
+                    session.commit()
+
+                # Do NOT add a new LeanMerchant here.
+                category = merchant_category
+                sub_category = None
+                merchant_fixed = None
+                merchant_id = merchant.merchant_id
+
 
             try:
+                # Check if the transaction already exists in the database
+                existing_transaction = session.query(Transaction).filter_by(
+                    user_id=user_id,
+                    merchant_id=merchant_id,
+                    amount=transaction_details['Cost'],
+                    date=transaction_details['Date']
+                ).first()
+
+                if existing_transaction:
+                    print(f"Transaction already exists: {transaction_details}")
+                    continue  # Skip this transaction
+
                 # Create a new transaction object
                 transaction = Transaction(
-                    user_id=1,  # Assuming a fixed user_id for now
-                    merchant_id=merchant.merchant_id,
+                    user_id=user_id,
+                    merchant_id=merchant_id,
+                    lean_merchant_id=lean_merchant.id if lean_merchant else None,  # Handle None case
                     amount=transaction_details['Cost'],
                     date=transaction_details['Date'],
-                    category=merchant_category,  # Fill with the matched category
-                    sub_category=''  # Placeholder for sub-category
+                    category=category,
+                    sub_category=sub_category,
+                    merchant_fixed=merchant_fixed
                 )
                 session.add(transaction)
                 session.commit()  # Commit the transaction
             except IntegrityError:
                 session.rollback()  # Skip duplicate transaction and continue
                 print(f"Skipped duplicate transaction: {transaction_details}")
+
 
 if __name__ == '__main__':
     main()
