@@ -2,6 +2,7 @@ import os
 import pickle
 import re
 import pandas as pd
+import subprocess  # Add this for starting app.py
 from rapidfuzz import process
 from sqlalchemy.exc import IntegrityError
 from google.oauth2.credentials import Credentials
@@ -18,7 +19,7 @@ def load_merchant_categories(file_path):
     merchant_dict = dict(zip(data['Razón social'], data['Category']))
     return merchant_dict
 
-def extract_transaction_details(email_body):
+def extract_transaction_details_banco_de_chile(email_body):
     """
     Extract transaction details from the email body.
     Focuses only on the portion of the email after the phrase 'compra por'.
@@ -56,6 +57,41 @@ def extract_transaction_details(email_body):
         'Date': date.group(1)
     }
 
+def extract_transaction_details_bci(email_body):
+    """
+    Extract transaction details from BCI emails.
+    """
+    cost_pattern = r"Monto\s*\$(\d{1,3}(?:\.\d{3})*)"
+    merchant_pattern = r"Comercio\s*(.+)"
+    date_pattern = r"Fecha\s*(\d{2}/\d{2}/\d{4})"
+    time_pattern = r"Hora\s*(\d{2}:\d{2})"
+    cost = re.search(cost_pattern, email_body)
+    merchant = re.search(merchant_pattern, email_body)
+    date = re.search(date_pattern, email_body)
+    time = re.search(time_pattern, email_body)
+    if not cost or not merchant or not date or not time:
+        return None
+    cost_value = int(cost.group(1).replace('.', ''))
+    date_time = f"{date.group(1)} {time.group(1)}"
+    return {
+        'Cost': float(cost_value),
+        'Merchant': merchant.group(1),
+        'Date': date_time
+    }
+
+
+def extract_transaction_details(email_body, sender_domain):
+    """
+    Dispatch email parsing logic based on sender domain.
+    """
+    if 'hotmail.com' in sender_domain or 'banco_de_chile' in sender_domain:
+        return extract_transaction_details_banco_de_chile(email_body)
+    elif 'gmail.com' in sender_domain or 'bci' in sender_domain:
+        return extract_transaction_details_bci(email_body)
+    else:
+        print(f"Unsupported sender domain: {sender_domain}")
+        return None
+
 
 def find_best_match(merchant_name, merchant_dict, threshold=90):
     """
@@ -67,6 +103,8 @@ def find_best_match(merchant_name, merchant_dict, threshold=90):
         if best_match:
             return best_match[0], merchant_dict[best_match[0]]  # Return matched merchant and category
     return merchant_name, "Other"  # If no match, assign to "Other"
+
+
 
 def main():
     creds = None
@@ -98,7 +136,12 @@ def main():
 
     user_id = user.user_id  # Get the user's ID
 
-    results = service.users().messages().list(userId='me', q='from:simon_gaucho@hotmail.com').execute()
+
+    results = service.users().messages().list(
+        userId='me',
+        q='from:(simon_gaucho@hotmail.com OR simongrasss@gmail.com)'
+    ).execute()
+
     messages = results.get('messages', [])
 
     # Load merchant categories into a dictionary for fallback matching
@@ -110,8 +153,16 @@ def main():
         for message in messages:
             msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
             snippet = msg['snippet']
-            transaction_details = extract_transaction_details(snippet)
+            headers = {header['name']: header['value'] for header in msg['payload']['headers']}
+            sender = headers.get('From', '')
+            # Extract domain using regex to handle variations in the 'From' format
+            sender_domain_match = re.search(r'@([a-zA-Z0-9.-]+)', sender)
+            sender_domain = sender_domain_match.group(1) if sender_domain_match else ''
+            print(f"Parsed sender domain: {sender_domain}")
 
+            transaction_details = extract_transaction_details(snippet, sender_domain)
+
+            
             # Skip emails that don't have complete transaction details
             if not transaction_details:
                 print(f"Email skipped: Missing transaction details. Snippet: {snippet}")
@@ -185,6 +236,12 @@ def main():
                 session.rollback()  # Skip duplicate transaction and continue
                 print(f"Skipped duplicate transaction: {transaction_details}")
 
+    # Start app.py in the same virtual environment
+    python_executable = os.path.join(os.getcwd(), "venv", "Scripts", "python.exe")
+    subprocess.Popen([python_executable, "app.py"])
+
+    # Inform the user to open the Flask app
+    print("Setup complete! Open http://127.0.0.1:5000/ in your browser.")
 
 if __name__ == '__main__':
     main()

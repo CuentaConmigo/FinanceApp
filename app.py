@@ -39,6 +39,9 @@ def get_credentials():
 # Authentication Route
 @app.route('/login')
 def login():
+    # Clear any existing session data
+    flask_session.clear()
+
     creds = get_credentials()  # Reuse or fetch credentials
     flask_session['credentials'] = creds_to_dict(creds)
 
@@ -78,6 +81,17 @@ def logout():
 
 @app.route('/')
 def home():
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+
+    # Get the user's email
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+
+    # Check if user exists and has completed the questionnaire
+    if not user or not (user.dob and user.income and user.region):  # Add more fields as needed
+        return redirect(url_for('questionnaire'))
+
     return render_template('home.html')
 
 
@@ -194,7 +208,7 @@ def show_transactions():
     )
 
     categories = {
-        "Transporte": ["Bencina", "Transporte público", "Mantenimiento"],
+        "Transporte": ["Bencina", "Transporte público", "Mantenimiento","Peajes/Tag"],
         "Entretenimiento": ["Películas", "Subscripciones (Netflix)", "Conciertos", "Deportes"],
         "Alojamiento": ["Hoteles", "Arriendo"],
         "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
@@ -328,7 +342,7 @@ def benchmark():
     age = (datetime.now().year - user.dob.year) if user.dob else None
     print(f"User age: {age}")
 
-    # Calculate user's decade start in Python
+    # Calculate user's decade start and end
     user_decade_start = (age // 10) * 10
     user_decade_end = user_decade_start + 9
     print(f"User's decade range: {user_decade_start}-{user_decade_end}")
@@ -337,76 +351,90 @@ def benchmark():
     similar_users_ids = session.query(UserCharacteristic.user_id).filter(
         between((datetime.now().year - func.date_part('year', UserCharacteristic.dob)).cast(Integer), user_decade_start, user_decade_end)
     ).all()
-    similar_users_ids = [u[0] for u in similar_users_ids]  # Extract IDs
+    similar_users_ids = [u[0] for u in similar_users_ids]
     print(f"Similar user IDs: {similar_users_ids}")
 
-    # Query transactions for similar users
-    similar_users_transactions = session.query(Transaction).filter(Transaction.user_id.in_(similar_users_ids)).all()
-    print(f"Number of transactions for similar users: {len(similar_users_transactions)}")
+    # Function to calculate monthly averages for a set of users
+    def calculate_monthly_averages(user_ids):
+        monthly_totals = session.query(
+            Transaction.user_id,
+            Transaction.category,
+            func.date_trunc('month', Transaction.date).label('month'),
+            func.sum(Transaction.amount).label('monthly_total')
+        ).filter(
+            Transaction.user_id.in_(user_ids)
+        ).group_by(
+            Transaction.user_id, Transaction.category, func.date_trunc('month', Transaction.date)
+        ).all()
 
-    # Fallback: If no similar users, use only the user's transactions
-    if not similar_users_transactions:
-        similar_users_transactions = session.query(Transaction).filter_by(user_id=user.user_id).all()
-        print(f"No similar users found. Fallback to user's transactions only. Count: {len(similar_users_transactions)}")
+        user_monthly_averages = {}
+        for user_id, category, month, monthly_total in monthly_totals:
+            user_monthly_averages.setdefault(user_id, {}).setdefault(category, []).append(monthly_total)
 
-    # Query for all transactions for the second plot
-    all_users = session.query(Transaction).all()
-    print(f"Total transactions for all users: {len(all_users)}")
+        category_averages = {}
+        for user_id, categories in user_monthly_averages.items():
+            for category, monthly_totals in categories.items():
+                average = sum(monthly_totals) / len(monthly_totals)  # Monthly average for this user
+                category_averages.setdefault(category, []).append(average)
 
-    # Get unique user IDs for all transactions
-    unique_user_ids = session.query(Transaction.user_id).distinct().all()
-    unique_user_count = len(unique_user_ids)
-    print(f"Unique user count for all transactions: {unique_user_count}")
+        group_averages = {
+            category: sum(averages) / len(averages) if averages else 0
+            for category, averages in category_averages.items()
+        }
 
-    # Aggregate spending by category for similar users
-    category_users = {}  # Track unique users contributing to each category
-    group_totals = {}
-    for transaction in similar_users_transactions:
-        category = transaction.category
-        group_totals[category] = group_totals.get(category, 0) + transaction.amount
-        category_users.setdefault(category, set()).add(transaction.user_id)
+        return group_averages, category_averages
 
-    group_averages = {
-        category: total / len(users)
-        for category, total in group_totals.items()
-        if (users := category_users.get(category))  # Only calculate if there are users
+    # Calculate averages for similar users
+    group_averages, similar_category_averages = calculate_monthly_averages(similar_users_ids)
+    print("\n=== Debug: Monthly Averages for Similar Users ===")
+    for category, averages in similar_category_averages.items():
+        print(f"Category: {category}, Averages: {averages}")
+    print(f"Group averages (final): {group_averages}\n")
+
+    # Calculate averages for all users
+    all_users_ids = session.query(UserCharacteristic.user_id).distinct().all()
+    all_users_ids = [u[0] for u in all_users_ids]
+    all_averages, all_category_averages = calculate_monthly_averages(all_users_ids)
+    print("\n=== Debug: Monthly Averages for All Users ===")
+    for category, averages in all_category_averages.items():
+        print(f"Category: {category}, Averages: {averages}")
+    print(f"All users' averages (final): {all_averages}\n")
+
+    # Calculate user-specific monthly averages
+    user_monthly_averages, _ = calculate_monthly_averages([user.user_id])
+    print("\n=== Debug: Monthly Averages for Current User ===")
+    for category, average in user_monthly_averages.items():
+        print(f"Category: {category}, Average: {average}")
+
+    # Calculate differences for the bar chart
+    similar_differences = {
+        category: user_monthly_averages.get(category, 0) - group_averages.get(category, 0)
+        for category in set(user_monthly_averages.keys()).union(group_averages.keys())
     }
-    print(f"Aggregated group totals by category: {group_totals}")
-    print(f"Unique users per category for similar users: {category_users}")
-    print(f"Final group averages: {group_averages}")
 
-    # Aggregate spending by category for all users
-    all_category_users = {}  # Track unique users contributing to each category
-    all_totals = {}
-    for transaction in all_users:
-        category = transaction.category
-        all_totals[category] = all_totals.get(category, 0) + transaction.amount
-        all_category_users.setdefault(category, set()).add(transaction.user_id)
-
-    all_users_averages = {
-        category: total / len(users)
-        for category, total in all_totals.items()
-        if (users := all_category_users.get(category))  # Only calculate if there are users
+    all_differences = {
+        category: user_monthly_averages.get(category, 0) - all_averages.get(category, 0)
+        for category in set(user_monthly_averages.keys()).union(all_averages.keys())
     }
-    print(f"Aggregated all users' totals by category: {all_totals}")
-    print(f"Unique users per category for all users: {all_category_users}")
-    print(f"Final all users' averages (corrected): {all_users_averages}")
 
-    # Calculate user spending
-    user_spending = {}
-    user_transactions = session.query(Transaction).filter_by(user_id=user.user_id).all()
-    print(f"User transactions: {len(user_transactions)}")
-    for transaction in user_transactions:
-        user_spending[transaction.category] = user_spending.get(transaction.category, 0) + transaction.amount
-    print(f"User spending by category: {user_spending}")
+    # Debug: Print differences
+    print("\n=== Debug: Differences for Similar Group ===")
+    for category, difference in similar_differences.items():
+        print(f"Category: {category}, Difference: {difference}")
+
+    print("\n=== Debug: Differences for All Users ===")
+    for category, difference in all_differences.items():
+        print(f"Category: {category}, Difference: {difference}")
 
     # Pass data to the template
     return render_template(
         'benchmark.html',
-        user_spending=user_spending,
+        user_spending=user_monthly_averages,
         group_averages=group_averages,
-        all_users_averages=all_users_averages,
-        age_range=f"{user_decade_start}-{user_decade_end}"  # Pass age range here
+        all_users_averages=all_averages,
+        age_range=f"{user_decade_start}-{user_decade_end}",
+        similar_differences=similar_differences,
+        all_differences=all_differences
     )
 
 
