@@ -204,16 +204,30 @@ def show_transactions():
 
     session.commit()  # Commit updates to the transactions table
 
-    # Fetch transactions and categories for display
-    transactions = (
+       # 1) Read the "filter" parameter from query string, default = 'all'
+    filter_option = request.args.get('filter', 'all')
+    print(f"Filter chosen by user: {filter_option}")
+
+    # 2) Build a base query for the user's transactions, joined with Merchant
+    transactions_query = (
         session.query(Transaction, Merchant)
         .join(Merchant, Transaction.merchant_id == Merchant.merchant_id)
-        .filter(Transaction.user_id == user_id)  # Restrict to this user's transactions
-        .all()
+        .filter(Transaction.user_id == user_id)
     )
 
+    # 3) If the user wants unverified only, add a filter
+    if filter_option == 'unverified':
+        transactions_query = transactions_query.filter(Transaction.merchant_fixed.is_(None))
+
+    # 4) Sort by Transaction.date descending so newest come first
+    transactions_query = transactions_query.order_by(Transaction.date.desc())
+
+    # 5) Retrieve final results
+    transactions = transactions_query.all()
+
+    # Build categories mapping (unchanged)
     categories = {
-        "Transporte": ["Bencina", "Transporte público", "Mantenimiento","Peajes/Tag"],
+        "Transporte": ["Bencina", "Transporte público", "Mantenimiento", "Peajes/Tag"],
         "Entretenimiento": ["Películas", "Subscripciones (Netflix)", "Conciertos", "Deportes"],
         "Alojamiento": ["Hoteles", "Arriendo"],
         "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
@@ -223,49 +237,74 @@ def show_transactions():
         "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
         "Educación": ["Colegiatura", "Libros", "Cursos"],
         "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones"],
-        "Otro": ["Viajes","Regalos","Otros"]
+        "Otro": ["Viajes", "Regalos", "Otros"]
     }
 
-    return render_template('transactions.html', transactions=transactions, categories=list(categories.keys()), category_map=categories)
-
+    return render_template(
+        'transactions.html',
+        transactions=transactions,
+        categories=list(categories.keys()),
+        category_map=categories,
+        filter_option=filter_option  # pass to template so we can highlight selected filter
+    )
 
 @app.route('/visualization', methods=['GET'])
 def spending_visualization():
-
     if 'email' not in flask_session:
         return redirect(url_for('login'))
 
     user_email = flask_session['email']
     user = session.query(UserCharacteristic).filter_by(email=user_email).first()
-
     if not user:
         return "User not found", 403
 
     user_id = user.user_id
-    
 
-    # Get the most recent month
-    current_year = datetime.now().year
-    current_month = datetime.now().month
-
-    # Prepare hierarchical data for sunburst chart
-    category_data = (
-        session.query(Transaction.category, Transaction.sub_category, func.sum(Transaction.amount))
-        .filter(
-            Transaction.user_id == user_id,
-            extract('year', Transaction.date) == current_year,
-            extract('month', Transaction.date) == current_month
+    # Distinct year-month pairs
+    distinct_months = (
+        session.query(
+            extract('year', Transaction.date).label('year'),
+            extract('month', Transaction.date).label('month'),
         )
-        .group_by(Transaction.category, Transaction.sub_category)
+        .filter(Transaction.user_id == user_id)
+        .group_by('year', 'month')
+        .order_by('year', 'month')
         .all()
     )
 
+    selected_year = request.args.get('year', type=int)
+    selected_month = request.args.get('month', type=int)
+
+    if distinct_months:
+        if not selected_year or not selected_month:
+            # Default to last
+            selected_year, selected_month = distinct_months[-1]
+    else:
+        # No transactions exist
+        selected_year = None
+        selected_month = None
+
+    # Filter data for the chosen month/year if available
+    if selected_year and selected_month:
+        category_data = (
+            session.query(Transaction.category, Transaction.sub_category, func.sum(Transaction.amount))
+            .filter(
+                Transaction.user_id == user_id,
+                extract('year', Transaction.date) == selected_year,
+                extract('month', Transaction.date) == selected_month
+            )
+            .group_by(Transaction.category, Transaction.sub_category)
+            .all()
+        )
+    else:
+        category_data = []
+
+    # Build sunburst_data
     sunburst_data = {"name": "Spending", "children": []}
     category_map = {}
     total_spending = 0
-
     for category, sub_category, amount in category_data:
-        total_spending += float(amount)  # Calculate the total spending
+        total_spending += float(amount)
         if category not in category_map:
             category_map[category] = {"name": category, "children": []}
             sunburst_data["children"].append(category_map[category])
@@ -273,7 +312,7 @@ def spending_visualization():
             {"name": sub_category or "Otro", "value": float(amount)}
         )
 
-    # Prepare bar chart data for monthly spending
+    # Monthly bar chart over all time
     monthly_totals = (
         session.query(
             extract('year', Transaction.date).label('year'),
@@ -294,8 +333,12 @@ def spending_visualization():
         'visualization.html',
         sunburstData=sunburst_data,
         barData=bar_data,
-        totalSpending=total_spending  # Pass the total spending to the template
+        totalSpending=total_spending,
+        distinct_months=distinct_months,
+        selected_year=selected_year,
+        selected_month=selected_month
     )
+
 
 
 

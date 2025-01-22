@@ -36,6 +36,13 @@
                 color: #333; /* Darker shade for better contrast */
                 z-index: 2;
             }
+            /* Create a new class just for the bar chart: */
+            .bar-chart-container {
+                position: relative;
+                display: inline-block;
+                width: 900px;  
+                height: 600px; 
+            }
             h1, h2 {
                 font-family: 'Roboto', sans-serif;
                 font-weight: 700; /* Bold for headings */
@@ -85,6 +92,19 @@
                 color: #fff; /* White text on hover */
                 box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
             }
+            form#month-form {
+            margin: 20px 0;
+            }
+            select {
+                padding: 8px;
+                margin-right: 10px;
+                font-size: 1rem;
+            }
+            button {
+                cursor: pointer;
+                padding: 8px 16px;
+            }
+
         </style>
     </head>
     
@@ -92,14 +112,46 @@
 <body>
     <h1>Visualización de Gastos</h1>
 
+    <!-- Month Selector Form -->
+    <form id="month-form" action="/visualization" method="GET">
+        <label for="year">Año:</label>
+        <select id="year" name="year">
+            <!-- Create a set of distinct years from distinct_months -->
+            {% set years = distinct_months | map(attribute=0) | list %}
+            {% for y in years | unique %}
+                <option value="{{ y }}"
+                    {% if y == selected_year %}selected{% endif %}>
+                    {{ y }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="month">Mes:</label>
+        <select id="month" name="month">
+            {% set months = distinct_months | map(attribute=1) | list %}
+            {% for m in months | unique %}
+                <option value="{{ m }}"
+                    {% if m == selected_month %}selected{% endif %}>
+                    {{ "%02d"|format(m|int) }}
+                </option>
+
+            {% endfor %}
+        </select>
+
+        <button type="submit">Ver</button>
+    </form>
+
     <h2>Gastos por Categoría</h2>
     <div class="chart-container">
         <div id="sunburst-chart"></div>
         <div id="totalDisplay">Total: ${{ totalSpending | int | tojson }}</div>
     </div>
 
-    <h2>Gstos por Mes</h2>
-    <canvas id="monthlyChart"></canvas>
+    
+    <h2>Gastos por Mes</h2>
+    <div class="bar-chart-container">
+        <canvas id="monthlyChart"></canvas>
+    </div>
 
     <div class="button-container">
         <a href="/" class="btn">Menu de Inicio</a>
@@ -109,6 +161,7 @@
         const sunburstData = {{ sunburstData | tojson }};
         const barData = {{ barData | tojson }};
         const totalSpending = {{ totalSpending | int | tojson }};
+
         
         const width = 840; // Increased width (600px * 1.4)
         const radius = width / 2;
@@ -273,6 +326,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false, // let chart fill the container's width/height
                 plugins: {
                     legend: { display: false }, // Hide legend
                     tooltip: {

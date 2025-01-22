@@ -115,6 +115,21 @@
 <body>
     <h1>Tus Transacciones</h1>
 
+  <!-- FILTER FORM -->
+  <form action="/transactions" method="GET" style="margin-bottom: 20px;">
+    <label for="filter">Filtrar:</label>
+    <select name="filter" id="filter">
+      <!-- Keep the user’s selection if it was previously chosen -->
+      <option value="all" {% if filter_option == "all" %} selected {% endif %}>Ver Todas</option>
+      <option value="unverified" {% if filter_option == "unverified" %} selected {% endif %}>Solo No Verificadas</option>
+      <!-- If you also want a "Verified only" option, add it here -->
+      <!--<option value="verified" {% if filter_option == "verified" %} selected {% endif %}>Solo Verificadas</option>-->
+    </select>
+    <button type="submit">Aplicar</button>
+  </form>
+
+
+
     {% if transactions %}
     <form method="POST">
         <table>
