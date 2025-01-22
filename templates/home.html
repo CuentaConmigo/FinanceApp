@@ -14,8 +14,8 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #fdf6e4, #e4eefc); /* Light gradient */
-            color: #333; /* Dark text for contrast */
+            background: linear-gradient(135deg, #fdf6e4, #e4eefc);
+            color: #333;
             text-align: center;
         }
         h1 {
@@ -26,23 +26,28 @@
         .button-container {
             display: flex;
             gap: 20px;
+            margin-bottom: 30px;
         }
         .btn {
             text-decoration: none;
             font-size: 1.2rem;
             font-weight: 500;
             padding: 15px 30px;
-            border: 2px solid #333; /* Dark border for contrast */
+            border: 2px solid #333;
             border-radius: 30px;
-            background-color: rgba(51, 51, 51, 0.1); /* Subtle dark overlay */
-            color: #333; /* Dark text */
+            background-color: rgba(51, 51, 51, 0.1);
+            color: #333;
             transition: all 0.3s ease;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         }
         .btn:hover {
-            background-color: #333; /* Darker hover effect */
-            color: #fff; /* White text on hover */
+            background-color: #333;
+            color: #fff;
             box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
+        }
+        .user-count {
+            font-size: 1.3rem;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -53,5 +58,11 @@
         <a href="/visualization" class="btn">Ver Gastos</a>
         <a href="/benchmark" class="btn">Comparación de Gastos</a>
     </div>
+
+    <!-- Display the number of users here -->
+    <p class="user-count">
+        Cuántos usuarios cuentan conmigo: {{ num_users }}
+    </p>
 </body>
 </html>
+

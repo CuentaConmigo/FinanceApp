@@ -102,7 +102,7 @@ def find_best_match(merchant_name, merchant_dict, threshold=90):
         best_match = process.extractOne(merchant_name, merchant_dict.keys(), score_cutoff=threshold)
         if best_match:
             return best_match[0], merchant_dict[best_match[0]]  # Return matched merchant and category
-    return merchant_name, "Other"  # If no match, assign to "Other"
+    return merchant_name, "Otro"  # If no match, assign to "Other"
 
 
 

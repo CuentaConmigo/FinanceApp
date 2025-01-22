@@ -51,6 +51,8 @@ class UserCharacteristic(Base):
     region = Column(String)
     degree = Column(String)
     yoe = Column(Integer)
+    name = Column(String)  # matches the "name" column in your PostgreSQL table
+
 
 
 

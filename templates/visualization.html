@@ -113,6 +113,22 @@
         const width = 840; // Increased width (600px * 1.4)
         const radius = width / 2;
 
+                // Define fixed color mapping for categories
+        const categoryColors = {
+            "Transporte": "#4CAF50", // Green
+            "Entretenimiento": "#FF9800", // Bright Orange
+            "Alojamiento": "#bc37d3", // Purple
+            "Servicios Personales": "#4d5ec1", // Indigo
+            "Shopping": "#FFC107", // Gold/Amber
+            "Comida": "#FF5722", // Reddish Orange
+            "Hogar": "#009688", // Teal
+            "Salud": "#E91E63", // Pink/Red
+            "Educación": "#2196F3", // Blue
+            "Bancos y Finanzas": "#896050", // Brown
+            "Otro": "#cccccc", // Grey
+
+        };
+
         const svg = d3.select("#sunburst-chart")
             .append("svg")
             .attr("width", width)
@@ -122,7 +138,10 @@
         
         const partition = d3.partition().size([2 * Math.PI, radius]);
         
-        const root = d3.hierarchy(sunburstData).sum(d => d.value);
+        // Sort categories by size (descending order) for better readability
+        const root = d3.hierarchy(sunburstData)
+            .sum(d => d.value)
+            .sort((a, b) => b.value - a.value);        
         partition(root);
         
         const arc = d3.arc()
@@ -131,7 +150,7 @@
             .innerRadius(d => d.y0)
             .outerRadius(d => d.y1);
 
-        const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+        //const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
         const paths = svg.selectAll("path")
             .data(root.descendants())
@@ -139,15 +158,19 @@
             .append("path")
             .attr("d", arc)
             .style("fill", d => {
-                if (d.depth === 1) return colorScale(d.data.name); // Use Tableau10 for category colors
-                if (d.depth === 2) {
-                    const siblings = d.parent.children; // Get all subcategories of the parent
-                    const index = siblings.indexOf(d); // Determine the index of the current subcategory
-                    const ratio = index / siblings.length; // Spread the shades proportionally
-                    return d3.interpolateLab(colorScale(d.parent.data.name), "#ffffff")(0.4 + ratio * 0.5); // Generate distinct shades
-                }
-                return "#fff"; // Default color for root
-            })
+            if (d.depth === 1) {
+                // Use fixed category colors
+                return categoryColors[d.data.name] || "#ccc"; // Fallback to grey for undefined categories
+            }
+            if (d.depth === 2) {
+                const parentColor = categoryColors[d.parent.data.name] || "#ccc";
+                const siblings = d.parent.children; // Get all subcategories of the parent
+                const index = siblings.indexOf(d); // Determine the index of the current subcategory
+                const ratio = index / siblings.length; // Spread the shades proportionally
+                return d3.interpolateLab(parentColor, "#ffffff")(0.4 + ratio * 0.5); // Generate distinct shades
+            }
+            return "#fff"; // Default color for root
+        })
             .style("opacity", d => d.depth === 2 ? 0 : 1) // Hide subcategories by default
             .on("mouseover", function (event, d) {
                 if (d.depth === 1 || d.depth === 2) {
@@ -190,20 +213,44 @@
             .enter()
             .append("text")
             .attr("transform", d => {
-                const x = arc.centroid(d)[0];
-                const y = arc.centroid(d)[1];
-                return `translate(${x}, ${y})`;
+                const midAngle = (d.x0 + d.x1) / 2; // Midpoint angle in radians
+                const arcLength = (d.x1 - d.x0) * (d.y1 + d.y0) / 2; // Average radius for arc length
+                const textLength = d.data.name.length * 7; // Approximate text width (7px per character)
+                const radialCenter = (d.y0 + d.y1) / 2; // Center position within the radial thickness
+                const inner_radialCenter = d.y0 
+
+                // Debugging: Log calculations for each category
+                console.log(`Category: ${d.data.name}, Arc Length: ${arcLength}, Text Length: ${textLength}`);
+
+                // If text length exceeds arc length, rotate the text to follow the arc
+                if (textLength > arcLength) {
+                    const angle = midAngle * (180 / Math.PI) - 90; // Convert radians to degrees
+                    return `rotate(${angle}) translate(${inner_radialCenter}, 0) rotate(${angle > 90 ? 180 : 0})`;
+                }
+
+                // Otherwise, keep the text horizontal at the centroid
+                const arcCenterX = arc.centroid(d)[0];
+                const arcCenterY = arc.centroid(d)[1];
+                return `translate(${arcCenterX}, ${arcCenterY})`;
+            })
+            .attr("text-anchor", d => {
+                const midAngle = (d.x0 + d.x1) / 2;
+                const arcLength = (d.x1 - d.x0) * (d.y1 + d.y0) / 2; // Average radius for arc length
+                const textLength = d.data.name.length * 7;
+
+                // Adjust anchor for rotated text
+                if (textLength > arcLength) {
+                    return midAngle > Math.PI ? "end" : "start"; // Flip for left/right alignment
+                }
+                return "middle"; // Default for horizontal text
             })
             .attr("dy", "0.35em")
-            .attr("text-anchor", "middle")
             .text(d => d.depth > 0 ? d.data.name : "")
-            .style("font-size", d => (d.depth === 1 ? "14px" : "12px")) // Slightly larger for categories
+            .style("font-size", d => (d.depth === 1 ? "14px" : "12px")) // Larger for categories
             .style("font-weight", "500") // Medium weight for better readability
             .style("fill", "#333") // Darker text for better contrast
             .style("font-family", "'Roboto', sans-serif") // Apply Google Font
             .style("display", d => d.depth > 0 ? "block" : "none");
-
-
 
 
         const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');

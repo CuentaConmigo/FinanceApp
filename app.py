@@ -89,10 +89,15 @@ def home():
     user = session.query(UserCharacteristic).filter_by(email=user_email).first()
 
     # Check if user exists and has completed the questionnaire
-    if not user or not (user.dob and user.income and user.region):  # Add more fields as needed
+    if not user or not (user.dob and user.income and user.region and user.name):  # Add more fields as needed
         return redirect(url_for('questionnaire'))
 
-    return render_template('home.html')
+
+    # Count how many user IDs exist in the table
+    # Note: func.count() returns a numeric count of rows
+    num_users = session.query(func.count(UserCharacteristic.user_id)).scalar()
+
+    return render_template('home.html', num_users=num_users)
 
 
 @app.route('/transactions', methods=['GET', 'POST'])
@@ -265,7 +270,7 @@ def spending_visualization():
             category_map[category] = {"name": category, "children": []}
             sunburst_data["children"].append(category_map[category])
         category_map[category]["children"].append(
-            {"name": sub_category or "Other", "value": float(amount)}
+            {"name": sub_category or "Otro", "value": float(amount)}
         )
 
     # Prepare bar chart data for monthly spending
@@ -306,6 +311,9 @@ def questionnaire():
         degree = request.form.get('degree')
         yoe = request.form.get('yoe')
 
+        name = request.form.get('name')
+
+
         # Fetch the logged-in user's email
         user_email = flask_session['email']
 
@@ -319,6 +327,7 @@ def questionnaire():
             user.region = region
             user.degree = degree
             user.yoe = yoe
+            user.name= name
             session.commit()  # Save changes to the database
 
         return redirect(url_for('home'))  # After submission, redirect to the home page
