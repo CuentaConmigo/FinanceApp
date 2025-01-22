@@ -223,7 +223,7 @@ def show_transactions():
         "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
         "Educación": ["Colegiatura", "Libros", "Cursos"],
         "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones"],
-        "Otro": []
+        "Otro": ["Viajes","Regalos","Otros"]
     }
 
     return render_template('transactions.html', transactions=transactions, categories=list(categories.keys()), category_map=categories)
