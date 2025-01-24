@@ -7,14 +7,36 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic
+from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic, Budget
 from datetime import datetime
 from sqlalchemy.types import Integer  # Add this line
+from calendar import monthrange
+
 
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Replace with a secure random key
+
+
+def dot_thousands(value):
+    """
+    Convert a numeric value (int/float/Decimal) to a string
+    with '.' as the thousands separator (no decimal places).
+    E.g.: 507489 -> '507.489'
+    """
+    if value is None:
+        return ''
+    # Convert to float if it’s Decimal
+    val = float(value)
+    # Format with comma separators for thousands
+    # E.g., 507,489 for English/US style
+    formatted = f"{val:,.0f}"
+    # Now replace commas with dots
+    return formatted.replace(',', '.')
+
+# Register the filter with Flask/Jinja
+app.jinja_env.filters['dot_thousands'] = dot_thousands
 
 
 # Helper function to manage OAuth token
@@ -111,7 +133,7 @@ def show_transactions():
     user = session.query(UserCharacteristic).filter_by(email=user_email).first()
 
     if not user:
-        return "User not found", 403
+        return redirect(url_for('questionnaire'))
 
     user_id = user.user_id
 
@@ -256,7 +278,7 @@ def spending_visualization():
     user_email = flask_session['email']
     user = session.query(UserCharacteristic).filter_by(email=user_email).first()
     if not user:
-        return "User not found", 403
+        return redirect(url_for('questionnaire'))
 
     user_id = user.user_id
 
@@ -488,6 +510,194 @@ def benchmark():
         similar_differences=similar_differences,
         all_differences=all_differences
     )
+
+
+
+from flask import render_template, request, redirect, url_for, session as flask_session
+from sqlalchemy import func, extract
+from datetime import datetime, date
+from calendar import monthrange
+
+@app.route('/presupuesto', methods=['GET', 'POST'])
+def presupuesto():
+    # 1) Check user session
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+
+    # 2) Fetch user from DB
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        return redirect(url_for('questionnaire'))
+
+    user_id = user.user_id
+
+    # ==============
+    #  POST Logic
+    # ==============
+    if request.method == 'POST':
+        category = request.form.get('category')
+        sub_category = request.form.get('sub_category')  # may be empty
+        new_budget_value = request.form.get('budget_set', '0')  # default to 0 if missing
+
+        # Convert to float
+        try:
+            new_budget_value = float(new_budget_value)
+        except ValueError:
+            new_budget_value = 0.0
+
+        # Fetch or create the Budget row
+        budget_row = session.query(Budget).filter_by(
+            user_id=user_id,
+            category=category,
+            sub_category=sub_category
+        ).first()
+
+        if budget_row:
+            # Update existing budget
+            budget_row.budget_set = new_budget_value
+        else:
+            # Create new budget
+            budget_row = Budget(
+                user_id=user_id,
+                category=category,
+                sub_category=sub_category,
+                budget_set=new_budget_value
+            )
+            session.add(budget_row)
+
+        session.commit()
+        return redirect(url_for('presupuesto'))
+
+    # ==============
+    #  GET Logic
+    # ==============
+    current_year = datetime.now().year
+    current_month = datetime.now().month
+
+    # For fraction of the month
+    days_in_month = monthrange(current_year, current_month)[1]
+    day_of_month = datetime.now().day
+    fraction_of_month = day_of_month / days_in_month if days_in_month else 1
+
+    # (A) Sum of all budgets: "Con tu configuración actual gastarás X al mes"
+    total_budget = session.query(func.sum(Budget.budget_set))\
+                          .filter_by(user_id=user_id)\
+                          .scalar() or 0
+
+    # (B) This month’s spending: "Este mes has gastado un total de X"
+    this_month_spending = session.query(func.sum(Transaction.amount))\
+        .filter(
+            Transaction.user_id == user_id,
+            extract('year', Transaction.date) == current_year,
+            extract('month', Transaction.date) == current_month
+        )\
+        .scalar() or 0
+
+    # (C) 3-month average spending: "En promedio gastas X al mes"
+    # For the last 3 calendar months (including current)
+    # Build a list of (year, month) for [this month, previous month, 2 months ago]
+    months_list = []
+    y = current_year
+    m = current_month
+    for i in range(3):
+        # Calculate year/month going backwards
+        adj_month = m - i
+        adj_year = y
+        if adj_month < 1:
+            adj_month += 12
+            adj_year -= 1
+        months_list.append((adj_year, adj_month))
+
+    three_month_total = 0
+    for (year_m, month_m) in months_list:
+        amt = session.query(func.sum(Transaction.amount))\
+            .filter(
+                Transaction.user_id == user_id,
+                extract('year', Transaction.date) == year_m,
+                extract('month', Transaction.date) == month_m
+            )\
+            .scalar() or 0
+        three_month_total += amt
+
+    three_month_total = three_month_total or 0  # ensure it's not None
+    from decimal import Decimal
+    avg_monthly_spending = three_month_total / Decimal('3.0')
+
+    # 1) Retrieve user budgets
+    user_budgets = session.query(Budget).filter_by(user_id=user_id).all()
+
+    # 2) Calculate how much user has spent in each (cat, subcat) this month
+    spending_data = (
+        session.query(
+            Transaction.category,
+            func.coalesce(Transaction.sub_category, 'Otros').label('sub_category'),
+            func.sum(Transaction.amount)
+        )
+        .filter(
+            Transaction.user_id == user_id,
+            extract('year', Transaction.date) == current_year,
+            extract('month', Transaction.date) == current_month
+        )
+        .group_by(Transaction.category, func.coalesce(Transaction.sub_category, 'Otros'))
+        .all()
+    )
+
+    # 3) Merge budgets + spending into budget_view_data
+    spent_map = {}
+    for (cat, subcat, total_amount) in spending_data:
+        spent_map[(cat, subcat)] = float(total_amount)
+
+    budget_view_data = []
+    for b in user_budgets:
+        usage = spent_map.get((b.category, b.sub_category), 0.0)
+        budget_limit = float(b.budget_set)
+        over_under = budget_limit - usage
+        budget_view_data.append({
+            "category": b.category,
+            "sub_category": b.sub_category,
+            "budget_set": budget_limit,
+            "usage": usage,
+            "over_under": over_under
+        })
+
+    # If you want to show categories that have spending but no budget, do so here
+    for (cat, subcat), spent_amount in spent_map.items():
+        exists = any(
+            x for x in budget_view_data
+            if x["category"] == cat and x["sub_category"] == subcat
+        )
+        if not exists:
+            budget_view_data.append({
+                "category": cat,
+                "sub_category": subcat,
+                "budget_set": 0.0,
+                "usage": spent_amount,
+                "over_under": -spent_amount
+            })
+
+    # optional: total_savings or leftover across categories
+    # (not used if we're switching to your new text, but you can keep it)
+    total_savings = sum(
+        item["over_under"] for item in budget_view_data if item["over_under"] > 0
+    )
+
+    # Render template, passing the new summary stats
+    return render_template(
+        "presupuesto.html",
+        budget_data=budget_view_data,
+        fraction_of_month=fraction_of_month,
+        total_savings=total_savings,
+
+        total_budget=total_budget,
+        this_month_spending=this_month_spending,
+        avg_monthly_spending=avg_monthly_spending
+    )
+
+
+
+
+
 
 
 

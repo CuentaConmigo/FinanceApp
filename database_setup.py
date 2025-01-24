@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime,ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker,relationship
+
 
 Base = declarative_base()
 
@@ -54,6 +55,16 @@ class UserCharacteristic(Base):
     name = Column(String)  # matches the "name" column in your PostgreSQL table
 
 
+
+class Budget(Base):
+    __tablename__ = 'budgets'
+    budget_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('user_characteristics.user_id'), nullable=False)
+    category = Column(String, nullable=False)
+    sub_category = Column(String)
+    budget_set = Column(Numeric, nullable=False)
+
+    user = relationship("UserCharacteristic", backref="budgets")
 
 
 
