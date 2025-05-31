@@ -1,126 +1,503 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inicio - Finance App</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons (optional but recommended for better visuals) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrQdPtzZxScw2iLLP3Yk1PxTW0aAK1gj9k0E0r6ZUV6lD6gZkN8pN2VEMP95q3GkE27Gadq7gibUE33dCQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <style>
-        /* Basic Reset */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inicio - Cuenta Conmigo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" />
 
-        body {
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #fdf6e4, #e4eefc);
-            color: #333;
-            text-align: center;
-            padding: 20px;
-        }
+  <style>
+    :root {
+      --bg: #fdfdfc;
+      --text: #222;
+      --card-bg: #ffffff;
+      --border: #eee;
+      --accent: #2f80ed;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
 
-        h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 40px;
-            color: #333;
-        }
+    [data-theme='dark'] {
+      --bg: #1e1e1e;
+      --text: #e0e0e0;
+      --card-bg: #2b2b2b;
+      --border: #444;
+      --accent: #5294e2;
+      --shadow: rgba(0, 0, 0, 0.3);
+    }
 
-        .button-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 40px;
-            justify-content: center;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        .btn {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            font-size: 1.2rem;
-            font-weight: 500;
-            padding: 15px 30px;
-            border: 2px solid #333;
-            border-radius: 30px;
-            background-color: rgba(51, 51, 51, 0.1);
-            color: #333;
-            transition: all 0.3s ease;
-            box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-        }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      text-align: center;
+      padding: 60px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
 
-        .btn:hover {
-            background-color: #333;
-            color: #fff;
-            box-shadow: 0px 8px 12px rgba(0,0,0,0.2);
-        }
+    #theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
 
-        .user-count {
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: #555;
-        }
+    header {
+      margin-bottom: 30px;
+    }
 
-        /* Responsive Design */
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 2.5rem;
-            }
+    .user-greeting {
+      font-size: 1rem;
+      color: var(--text);
+      opacity: 0.8;
+      margin-bottom: 5px;
+    }
 
-            .btn {
-                font-size: 1rem;
-                padding: 12px 25px;
-            }
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .main-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    }
 
-            .user-count {
-                font-size: 1.2rem;
-            }
-        }
+    .user-badge {
+    font-size: 0.85rem;
+    background: #e0f4ff;
+    color: #1a73e8;
+    border-radius: 20px;
+    padding: 6px 12px;
+    margin: 10px auto 0;
+    display: inline-block;
+    }
 
-        /* Optional: Add some animations */
-        .btn {
-            transition: transform 0.2s;
-        }
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
 
-        .btn:hover {
-            transform: translateY(-3px);
-        }
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: 500;
+      padding: 14px 26px;
+      border: 2px solid var(--text);
+      border-radius: 30px;
+      background-color: rgba(51, 51, 51, 0.05);
+      color: var(--text);
+      transition: all 0.25s ease;
+      box-shadow: 0 3px 5px var(--shadow);
+    }
 
-    </style>
+    .btn:hover {
+      background-color: var(--accent);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px var(--shadow);
+    }
+
+    .btn-secondary {
+      font-size: 0.85rem;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--accent);
+      color: #fff;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 20px var(--shadow);
+      padding: 30px;
+      width: 100%;
+      max-width: 640px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card h2 {
+      font-size: 1.4rem;
+      color: var(--text);
+      margin-bottom: 15px;
+    }
+
+    .card p {
+      margin: 8px 0;
+      font-size: 1rem;
+    }
+    .split-layout {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto 40px;
+        gap: 40px;
+        flex-wrap: wrap;
+    }
+
+    .left-panel {
+        flex: 1;
+        min-width: 300px;
+        max-width: 500px;
+        text-align: left;
+    }
+
+    .right-panel {
+        flex: 1;
+        min-width: 300px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .hero-illustration {
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+        border-radius: 16px;
+        box-shadow: 0 10px 20px var(--shadow);
+    }
+
+    .disclaimer {
+      font-size: 0.85rem;
+      color: var(--text);
+      opacity: 0.6;
+      margin-top: 10px;
+    }
+    .bento-card {
+    position: relative; 
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    width: 310px;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 6px 12px var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--border);
+    }
+
+
+    .bento-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 18px var(--shadow);
+    }
+
+    .bento-card h2 {
+    font-size: 1.2rem;
+    margin: 12px 0 6px;
+    color: var(--text);
+    }
+
+    .bento-card p {
+    font-size: 0.95rem;
+    opacity: 0.75;
+    }
+
+    .bento-img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    }
+    .bento-card.red-theme {
+    background-color: #fef3f1; /* Notion red-100 */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 6px 12px var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .bento-header-wrapper {
+    display: flex;
+    flex-direction: column;
+    }
+
+    .bento-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    }
+
+    .bento-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    }
+
+    .bento-eyebrow-icon {
+    width: 32px;
+    height: 32px;
+    }
+
+    .bento-eyebrow-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #494744;
+    margin: 0;
+    }
+
+    .badge-muted {
+    font-size: 0.75rem;
+    color: #78736f;
+    background-color: #f6f5f4;
+    border-radius: 9999px;
+    padding: 2px 8px;
+    }
+
+    .bento-title-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    }
+
+    .bento-title {
+    font-size: 1.625rem;
+    font-weight: 700;
+    margin: 0;
+    color: #191918;
+    }
+
+    .bento-image-container {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    }
+
+    .bento-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    }
+
+    .bento-card-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    }
+    .bento-card.blue-theme {
+  background-color: #e7f3fe; /* light blue */
+    }
+
+    .bento-card.purple-theme {
+    background-color: #f3e8fd; /* light purple */
+    }
+    .bento-card.green-theme {
+  background-color: #e6f4ea; /* soft green */
+    }
+
+    .bento-card.yellow-theme {
+    background-color: #fff9db; /* soft yellow */
+    }
+
+
+    .card-link {
+    text-decoration: none;
+    color: inherit;
+    }
+
+    footer {
+      margin-top: auto;
+      font-size: 0.8rem;
+      color: var(--text);
+      opacity: 0.5;
+    }
+    [data-theme='dark'] .bento-title {
+    color: #191918 !important;
+    }
+
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2.3rem;
+      }
+
+      .btn {
+        font-size: 1rem;
+        padding: 12px 20px;
+      }
+
+      .btn-secondary {
+        font-size: 0.8rem;
+      }
+
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h1>Cuenta Conmigo</h1>
+<!-- User Greeting (Top-left) -->
+<!-- User Greeting -->
+<div style="position: absolute; top: 20px; left: 20px; font-size: 0.9rem; opacity: 0.7;">
+    👤 Hola, {{ user.name.split(' ')[0] }}
+  </div>
+<div style="position: absolute; top: 45px; left: 20px; font-size: 0.85rem; opacity: 0.7;">
+    📈 Más de {{ num_users|dot_thousands }} usuarios activos
+  </div>
     
-    <!-- Button Container with Icons -->
-    <div class="button-container">
-        <a href="/transactions" class="btn">
-            <i class="fas fa-list-alt"></i> Ver Transacciones
-        </a>
-        <a href="/visualization" class="btn">
-            <i class="fas fa-chart-bar"></i> Ver Gastos
-        </a>
-        <a href="/benchmark" class="btn">
-            <i class="fas fa-balance-scale"></i> Comparación de Gastos
-        </a>
-        <a href="/presupuesto" class="btn">
-            <i class="fas fa-wallet"></i> Presupuesto Mensual
-        </a>
+
+  <!-- Dark mode toggle -->
+  <button id="theme-toggle">🌙</button>
+  
+  <!-- Main content block -->
+  <div style="width: 100%; max-width: 700px; margin: 0 auto 40px; text-align: center;">
+    <h1>Cuenta Conmigo</h1>
+  
+    <!-- Two cards side by side -->
+    <div style="width: 100%; max-width: 640px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-top: 30px;">
+        <article class="bento-card yellow-theme">
+            <div class="bento-header-wrapper">
+              <header class="bento-header">
+                <div class="bento-eyebrow">
+                  <img class="bento-eyebrow-icon" src="{{ url_for('static', filename='images/Transactions_icon.png') }}" alt="icono transacciones" width="32" height="32">
+                  <h3 class="bento-eyebrow-text">Transacciones</h3>
+                  <span class="badge badge-muted">Nuevo</span>
+                </div>
+                <div class="bento-title-wrapper">
+                  <h2 class="bento-title">Historial de movimientos</h2>
+                </div>
+              </header>
+            </div>  
+            <picture class="bento-image-container">
+              <img class="bento-image" src="{{ url_for('static', filename='images/Transactions_image.png') }}" alt="Imagen de transacciones">
+            </picture>
+            <a class="bento-card-link" href="/transactions" aria-label="Ver transacciones"></a>
+          </article>
+          
+  
+          <article class="bento-card red-theme">
+            <div class="bento-header-wrapper">
+              <header class="bento-header">
+                <div class="bento-eyebrow">
+                  <img class="bento-eyebrow-icon" src="{{ url_for('static', filename='images/Gastos_icon.png') }}" alt="icono gastos" width="32" height="32">
+                  <h3 class="bento-eyebrow-text">Gastos</h3>
+                  <span class="badge badge-muted">Nuevo</span>
+                </div>
+                <div class="bento-title-wrapper">
+                  <h2 class="bento-title">Distribución de gastos</h2>
+                </div>
+              </header>
+            </div>
+            <picture class="bento-image-container">
+              <img class="bento-image" src="{{ url_for('static', filename='images/Gastos_image.png') }}" alt="Imagen de gastos">
+            </picture>
+            <a class="bento-card-link" href="/visualization" aria-label="Ver gastos"></a>
+          </article>
+          
+    </div>
+  
+    <!-- Comparación card -->
+<!-- Comparación card inside a wrapper for proper layout -->
+    <div style="display: flex; justify-content: center; margin-top: 30px;">
+    <article class="bento-card blue-theme" style="width: 100%; max-width: 640px;">
+          <div class="bento-header-wrapper">
+          <header class="bento-header">
+            <div class="bento-eyebrow">
+              <img class="bento-eyebrow-icon" src="{{ url_for('static', filename='images/Benchmark_icon.png') }}" alt="icono comparación" width="32" height="32">
+              <h3 class="bento-eyebrow-text">Comparación</h3>
+              <span class="badge badge-muted">Nuevo</span>
+            </div>
+            <div class="bento-title-wrapper">
+              <h2 class="bento-title">Benchmark con otros usuarios</h2>
+            </div>
+          </header>
+        </div>
+        <picture class="bento-image-container">
+          <img class="bento-image" src="{{ url_for('static', filename='images/Benchmark_image.png') }}" alt="Imagen de comparación">
+        </picture>
+        <a class="bento-card-link" href="/benchmark" aria-label="Ver comparación"></a>
+      </article>
+        </div>
     </div>
 
-    <!-- Display the number of users -->
-    <p class="user-count">
-        Cuántos usuarios cuentan conmigo: {{ num_users|dot_thousands }}
-    </p>
+      
+  </div>
+  
+      
+
+
+
+
+  
+  
+  <!-- Sync Card -->
+  <div class="card">
+    <h2>🔄 Sincronización</h2>
+    {% if user.last_synced %}
+    <p style="margin-bottom: 10px;">Última sincronización: <strong>{{ user.last_synced.strftime('%d/%m/%Y') }}</strong></p>
+    {% else %}
+    <p style="margin-bottom: 10px;">Aún no has sincronizado tus correos.</p>
+    {% endif %}
+    <div class="button-container">
+      <form action="{{ url_for('syncing') }}" method="get">
+        <input type="hidden" name="full" value="false" />
+        <button type="submit" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Rápida</button>
+      </form>
+      <form action="{{ url_for('syncing') }}" method="get">
+        <input type="hidden" name="full" value="true" />
+        <button type="submit" class="btn btn-secondary"><i class="fas fa-history"></i> Completa</button>
+      </form>
+    </div>
+    <p class="disclaimer">⚠️ Puede tardar varios minutos si tienes muchos correos.</p>
+  </div>
+  
+  <footer>
+    © 2025 Cuenta Conmigo. Todos los derechos reservados.
+  </footer>
+
+  <!-- Dark Mode Script -->
+  <script>
+    const toggle = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+
+    toggle.addEventListener('click', () => {
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
+    });
+  </script>
 </body>
 </html>

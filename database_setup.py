@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime,ForeignKey, func
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime,ForeignKey, func, Text
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker,relationship
 
 
@@ -30,6 +30,8 @@ class Transaction(Base):
     category = Column(String)
     sub_category = Column(String)
     merchant_fixed = Column(String)
+    merchant = relationship("Merchant", backref="transactions")
+
 
 class LeanMerchant(Base):
     __tablename__ = 'lean_merchants'
@@ -53,6 +55,8 @@ class UserCharacteristic(Base):
     degree = Column(String)
     yoe = Column(Integer)
     name = Column(String)  # matches the "name" column in your PostgreSQL table
+    last_synced = Column(DateTime, default=None)
+
 
 
 
@@ -66,6 +70,15 @@ class Budget(Base):
 
     user = relationship("UserCharacteristic", backref="budgets")
 
+class OAuthToken(Base):
+    __tablename__ = 'oauth_tokens'
+    email = Column(String, primary_key=True)
+    token = Column(Text)
+    refresh_token = Column(Text)
+    token_uri = Column(Text)
+    client_id = Column(Text)
+    client_secret = Column(Text)
+    scopes = Column(Text)
 
 
 # Create all tables in the database

@@ -113,25 +113,45 @@
 
 
 <body>
+    <a href="/" class="btn" style="position: absolute; top: 20px; left: 20px;">Menu de Inicio</a>
+
     <h1>Tus Transacciones</h1>
 
   <!-- FILTER FORM -->
   <form action="/transactions" method="GET" style="margin-bottom: 20px;">
-    <label for="filter">Filtrar:</label>
-    <select name="filter" id="filter">
-      <!-- Keep the user’s selection if it was previously chosen -->
-      <option value="all" {% if filter_option == "all" %} selected {% endif %}>Ver Todas</option>
-      <option value="unverified" {% if filter_option == "unverified" %} selected {% endif %}>Solo No Verificadas</option>
-      <!-- If you also want a "Verified only" option, add it here -->
-      <!--<option value="verified" {% if filter_option == "verified" %} selected {% endif %}>Solo Verificadas</option>-->
-    </select>
-    <button type="submit">Aplicar</button>
-  </form>
+        <label for="filter">Filtrar:</label>
+        <select name="filter" id="filter">
+            <option value="all" {% if filter_option == "all" %} selected {% endif %}>Ver Todas</option>
+            <option value="unverified" {% if filter_option == "unverified" %} selected {% endif %}>Solo No Verificadas</option>
+        </select>
+
+        <label for="year">Año:</label>
+        <select name="year" id="year">
+            <option value="">Todos</option>
+            {% for year, _ in year_months|unique(attribute=0) %}
+            <option value="{{ year|int }}" {% if selected_year == year|int %}selected{% endif %}>{{ year|int }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="month">Mes:</label>
+        <select name="month" id="month">
+            <option value="">Todos</option>
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>{{ "%02d"|format(m) }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Aplicar</button>
+    </form>
+
 
 
 
     {% if transactions %}
     <form method="POST">
+        <input type="hidden" name="filter_option" value="{{ filter_option }}">
+        <input type="hidden" name="selected_year" value="{{ selected_year }}">
+        <input type="hidden" name="selected_month" value="{{ selected_month }}">     
         <table>
             <thead>
                 <tr>
@@ -150,9 +170,9 @@
             <tbody>
                 {% for transaction, merchant in transactions %}
                 <tr class="{% if transaction.merchant_fixed %}verified{% endif %}">
-                    <td>{{ transaction.date }}</td>
+                    <td>{{ transaction.date.strftime('%d/%m/%Y') if transaction.date else '' }}</td>
                     <td>{{ merchant.merchant_name }}</td>
-                    <td>${{ transaction.amount }}</td>
+                    <td>${{ "{:,.1f}".format(transaction.amount).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                     <!-- Display current values -->
                     <td>{{ transaction.category or 'No Verificado' }}</td>
                     <td>{{ transaction.sub_category or 'No Verificado' }}</td>

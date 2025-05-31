@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Debug Panel</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { margin-bottom: 0.5em; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>🛠 Debug Panel</h1>
+  <p><strong>Email:</strong> {{ email }}</p>
+  <p><strong>User ID:</strong> {{ user.user_id }}</p>
+  <p><strong>Name:</strong> {{ user.name or 'N/A' }}</p>
+
+  <h2>Recent Transactions</h2>
+  {% if transactions %}
+    <table>
+      <tr>
+        <th>Date</th>
+        <th>Merchant</th>
+        <th>Amount</th>
+        <th>Category</th>
+      </tr>
+      {% for t in transactions %}
+      <tr>
+        <td>{{ t.date }}</td>
+        <td>{{ t.merchant.merchant_name }}</td>
+        <td>{{ t.amount }}</td>
+        <td>{{ t.category }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No transactions found.</p>
+  {% endif %}
+</body>
+</html>

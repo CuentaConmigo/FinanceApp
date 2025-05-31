@@ -113,12 +113,12 @@
     <h1>Visualización de Gastos</h1>
 
     <!-- Month Selector Form -->
-    <form id="month-form" action="/visualization" method="GET">
+    <form id="month-form" onsubmit="return false;">
         <label for="year">Año:</label>
         <select id="year" name="year">
             <!-- Create a set of distinct years from distinct_months -->
             {% set years = distinct_months | map(attribute=0) | list %}
-            {% for y in years | unique %}
+            {% for y in years | unique | sort %}
                 <option value="{{ y }}"
                     {% if y == selected_year %}selected{% endif %}>
                     {{ y }}
@@ -128,14 +128,12 @@
 
         <label for="month">Mes:</label>
         <select id="month" name="month">
-            {% set months = distinct_months | map(attribute=1) | list %}
-            {% for m in months | unique %}
-                <option value="{{ m }}"
-                    {% if m == selected_month %}selected{% endif %}>
-                    {{ "%02d"|format(m|int) }}
-                </option>
-
-            {% endfor %}
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}"
+              {% if m == selected_month %}selected{% endif %}>
+              {{ "%02d"|format(m) }}
+            </option>
+          {% endfor %}
         </select>
 
         <button type="submit">Ver</button>
@@ -147,12 +145,49 @@
         <div id="totalDisplay">Total: ${{ totalSpending | int | tojson }}</div>
     </div>
 
+
+    <form id="category-form" style="margin-bottom: 20px;" onsubmit="return false;">
+        <label for="category">Filtrar por Categoría:</label>
+        <select id="category" name="category">
+            <option value="all" {% if selected_category == 'all' %}selected{% endif %}>Mostrar todas</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
     
-    <h2>Gastos por Mes</h2>
+        <input type="hidden" id="selected_year" value="{{ selected_year }}">
+        <input type="hidden" id="selected_month" value="{{ selected_month }}">
+    </form>
+    
+    
+    
+    <h2>  Gastos por Mes{% if category_filter != 'all' %}: {{ category_filter }}{% endif %}</h2>
+    {% if rolling_summary %}
+    <div style="margin-top: 20px; margin-bottom: 30px; font-size: 18px; color: #333;">
+        {% macro format_number(n) -%}
+        {{ "{:,.0f}".format(n).replace(",", ".") }}
+        {%- endmacro %}
+
+        {% macro format_percent(p) -%}
+        {{ "{:.1f}".format(p).replace(".", ",") }}%
+        {%- endmacro %}
+
+        En los últimos 3 meses, tu gasto promedio fue de <strong>${{ format_number(rolling_summary.avg_prev) }}</strong>.
+        <br>
+        Este mes gastaste <strong>${{ format_number(rolling_summary.recent) }}</strong>, lo cual representa una variación de 
+        <strong style="color: {{ 'green' if rolling_summary.trend == 'down' else 'red' if rolling_summary.trend == 'up' else 'gray' }}">
+        {{ format_percent(rolling_summary.pct_change) }}
+        </strong> respecto al promedio anterior.
+
+    </div>
+    {% endif %}
+
     <div class="bar-chart-container">
         <canvas id="monthlyChart"></canvas>
     </div>
 
+    
+    
     <div class="button-container">
         <a href="/" class="btn">Menu de Inicio</a>
     </div>
@@ -307,17 +342,19 @@
 
 
         const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-        new Chart(monthlyCtx, {
+        monthlyChart =new Chart(monthlyCtx, {
             type: 'bar',
             data: {
                 labels: barData.labels,
                 datasets: [{
                     label: 'Monthly Spending',
                     data: barData.totals,
-                    backgroundColor: function (context) {
+                    backgroundColor: barData.category && barData.category !== "all"
+                    ? categoryColors[barData.category] || "#cccccc"
+                    : function (context) {
                         const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, context.chart.height);
-                        gradient.addColorStop(0, '#4bc0c0'); // Light green
-                        gradient.addColorStop(1, '#36a2eb'); // Blue
+                        gradient.addColorStop(0, '#4bc0c0');
+                        gradient.addColorStop(1, '#36a2eb');
                         return gradient;
                     },
                     hoverBackgroundColor: '#4bc0c0', // Highlight color on hover
@@ -345,18 +382,17 @@
                             family: 'Roboto',
                             size: 14,
                             weight: '400',
-                }
-                    },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        formatter: value => `$${value.toLocaleString('es-CL')}`, // Format values
-                        color: '#333',
-                        font: {
-                            family: 'Roboto',
-                            size: 16,
-                            weight: '500',
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return `Gasto: $${context.raw.toLocaleString('es-CL')}`;
+                            }
                         }
+                    }
+                    ,
+                    datalabels: {
+                        display: false
+                       
                     }
 
                 },
@@ -423,8 +459,167 @@
             plugins: [ChartDataLabels] // Ensure DataLabels plugin is active
         });
 
-
-
     </script>
+
+    <script>
+        document.getElementById("category").addEventListener("change", async function () {
+            const selectedCategory = this.value;
+            const year = document.getElementById("selected_year").value;
+            const month = document.getElementById("selected_month").value;
+
+            const response = await fetch(`/api/visualization_data?category=${selectedCategory}&year=${year}&month=${month}`);
+            const newData = await response.json();
+
+            monthlyChart.data.labels = newData.labels;
+            monthlyChart.data.datasets[0].data = newData.totals;
+
+            // Update color if filtered
+            const color = newData.category !== "all" ? (categoryColors[newData.category] || "#cccccc") : (ctx => {
+                const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+                gradient.addColorStop(0, '#4bc0c0');
+                gradient.addColorStop(1, '#36a2eb');
+                return gradient;
+            });
+
+            monthlyChart.data.datasets[0].backgroundColor = color;
+            monthlyChart.update();
+        });
+    </script>
+    <script>
+        let lastCategory = document.getElementById("category").value;
+        
+        function handleCategoryChange(select) {
+            const current = select.value;
+        
+            // Always submit the form even if user re-clicks same option
+            if (current === lastCategory) {
+                select.form.submit();
+            } else {
+                lastCategory = current;
+                select.form.submit();
+            }
+        }
+    </script>
+    <script>
+        const yearSelect = document.getElementById("year");
+        const monthSelect = document.getElementById("month");
+    
+        async function updateSunburstChart() {
+            const year = yearSelect.value;
+            const month = monthSelect.value;
+    
+            const response = await fetch(`/api/sunburst_data?year=${year}&month=${month}`);
+            const data = await response.json();
+            if (!data || !data.sunburstData) return;
+    
+            // Clear existing chart
+            d3.select("#sunburst-chart").select("svg").remove();
+    
+            // Rebuild the chart with new data
+            buildSunburstChart(data.sunburstData, data.totalSpending);
+        }
+    
+        function buildSunburstChart(sunburstData, totalSpending) {
+            const svg = d3.select("#sunburst-chart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", width)
+                .append("g")
+                .attr("transform", `translate(${radius},${radius})`);
+    
+            const root = d3.hierarchy(sunburstData)
+                .sum(d => d.value)
+                .sort((a, b) => b.value - a.value);
+    
+            partition(root);
+    
+            const arcPath = d3.arc()
+                .startAngle(d => d.x0)
+                .endAngle(d => d.x1)
+                .innerRadius(d => d.y0)
+                .outerRadius(d => d.y1);
+    
+            svg.selectAll("path")
+                .data(root.descendants())
+                .enter()
+                .append("path")
+                .attr("d", arcPath)
+                .style("fill", d => {
+                    if (d.depth === 1) return categoryColors[d.data.name] || "#ccc";
+                    if (d.depth === 2) {
+                        const parentColor = categoryColors[d.parent.data.name] || "#ccc";
+                        const siblings = d.parent.children;
+                        const index = siblings.indexOf(d);
+                        const ratio = index / siblings.length;
+                        return d3.interpolateLab(parentColor, "#ffffff")(0.4 + ratio * 0.5);
+                    }
+                    return "#fff";
+                })
+                .style("opacity", d => d.depth === 2 ? 0 : 1)
+                .on("mouseover", function (event, d) {
+                    if (d.depth === 1 || d.depth === 2) {
+                        d3.select("#totalDisplay").html(`${d.data.name}<br>$${d.value.toLocaleString('es-CL')}`);
+                        svg.selectAll("path").filter(p => p.parent === d || p === d).style("opacity", 1);
+                        svg.selectAll("text").filter(p => p === d || p.parent === d).style("display", "block");
+                    }
+                })
+                .on("mouseout", function () {
+                    d3.select("#totalDisplay").html(`Total<br>$${totalSpending.toLocaleString('es-CL')}`);
+                    svg.selectAll("path").filter(p => p.depth === 2).style("opacity", 0);
+                    svg.selectAll("text").filter(p => p.depth === 2).style("display", "none");
+                });
+
+    
+            d3.select("#totalDisplay").html(`Total<br>$${totalSpending.toLocaleString('es-CL')}`);
+            // Text labels for categories and subcategories
+            svg.selectAll("text")
+                .data(root.descendants())
+                .enter()
+                .append("text")
+                .attr("transform", d => {
+                    const midAngle = (d.x0 + d.x1) / 2;
+                    const arcLength = (d.x1 - d.x0) * (d.y1 + d.y0) / 2;
+                    const textLength = d.data.name.length * 7;
+                    const radialCenter = (d.y0 + d.y1) / 2;
+                    const inner_radialCenter = d.y0;
+
+                    if (textLength > arcLength) {
+                        const angle = midAngle * (180 / Math.PI) - 90;
+                        return `rotate(${angle}) translate(${inner_radialCenter}, 0) rotate(${angle > 90 ? 180 : 0})`;
+                    }
+
+                    const arcCenterX = arcPath.centroid(d)[0];
+                    const arcCenterY = arcPath.centroid(d)[1];
+                    return `translate(${arcCenterX}, ${arcCenterY})`;
+                })
+                .attr("text-anchor", d => {
+                    const midAngle = (d.x0 + d.x1) / 2;
+                    const arcLength = (d.x1 - d.x0) * (d.y1 + d.y0) / 2;
+                    const textLength = d.data.name.length * 7;
+
+                    if (textLength > arcLength) {
+                        return midAngle > Math.PI ? "end" : "start";
+                    }
+                    return "middle";
+                })
+                .attr("dy", "0.35em")
+                .text(d => d.depth > 0 ? d.data.name : "")
+                .style("font-size", d => (d.depth === 1 ? "14px" : "12px"))
+                .style("font-weight", "500")
+                .style("fill", "#333")
+                .style("font-family", "'Roboto', sans-serif")
+                .style("display", d => d.depth > 0 ? (d.depth === 1 ? "block" : "none") : "none");
+
+
+
+        }
+    
+        // Add event listeners
+        yearSelect.addEventListener("change", updateSunburstChart);
+        monthSelect.addEventListener("change", updateSunburstChart);
+    </script>
+    
+    
+
 </body>
 </html>

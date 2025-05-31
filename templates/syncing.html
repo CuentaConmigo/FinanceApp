@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Syncing Gmail</title>
+  <meta http-equiv="refresh" content="1;url=/sync?full={{ request.args.get('full', 'false') }}" />
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 60px; }
+    h1 { font-size: 2em; margin-bottom: 10px; }
+    p { font-size: 1.2em; color: #555; }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 30px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+    <h1>📩 Sincronizando con Gmail </h1>
+    <div class="loader"></div>
+    <p id="status">Sincronizando transacciones...</p>
+    <p style="margin-top: 20px;">
+        ⚠️ Por favor, no cierres esta pestaña hasta que termine la sincronización.
+    </p>
+    <p style="margin-top: 10px; color: #888;">
+        La primera sincronización puede demorar hasta <strong>10 minutos</strong>, especialmente si tienes muchas transacciones antiguas.
+    </p>
+    <script>
+      async function pollSyncStatus() {
+        const res = await fetch("/sync_status");
+        const data = await res.json();
+        document.getElementById("status").innerText = `🔄 ${data.count} nuevas transacciones encontradas...`;
+  
+        // Keep polling until the sync result page takes over
+        setTimeout(pollSyncStatus, 1000);
+      }
+  
+      pollSyncStatus();
+    </script>
+  </body>
+  
+</html>
