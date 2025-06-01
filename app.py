@@ -300,7 +300,7 @@ def show_transactions():
 
     # Build categories mapping (unchanged)
     categories = {
-        "Transporte": ["Bencina", "Transporte público", "Mantenimiento", "Peajes/Tag"],
+        "Transporte": ["Bencina", "Transporte público", "Mantenimiento", "Peajes/Tag","Estacionamiento"],
         "Entretenimiento": ["Películas", "Subscripciones (Netflix)", "Conciertos", "Deportes"],
         "Alojamiento": ["Hoteles", "Arriendo"],
         "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
@@ -334,7 +334,8 @@ def show_transactions():
         filter_option=filter_option,  # pass to template so we can highlight selected filter
         year_months=year_months,
         selected_year=selected_year,
-        selected_month=selected_month
+        selected_month=selected_month,
+        user=user
 
     )
 
@@ -501,6 +502,9 @@ def spending_visualization():
 
     )
 
+@app.route('/insights')
+def insights():
+    return render_template("insights.html")
 
 
 
@@ -787,6 +791,223 @@ def get_sunburst_data():
         "sunburstData": sunburst_data,
         "totalSpending": total_spending
     })
+
+
+@app.route('/presupuesto', methods=['GET', 'POST'])
+
+def presupuesto():
+    # 1) Check user session
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+
+    # 2) Fetch user from DB
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        return redirect(url_for('questionnaire'))
+
+    user_id = user.user_id
+
+    # ==============
+    #  POST Logic
+    # ==============
+    if request.method == 'POST':
+        category = request.form.get('category')
+        sub_category = request.form.get('sub_category')  # may be empty
+        new_budget_value = request.form.get('budget_set', '0')  # default to 0 if missing
+
+        # Convert to float
+        try:
+            new_budget_value = float(new_budget_value)
+        except ValueError:
+            new_budget_value = 0.0
+
+        # Fetch or create the Budget row
+        budget_row = session.query(Budget).filter_by(
+            user_id=user_id,
+            category=category,
+            sub_category=sub_category
+        ).first()
+
+        if budget_row:
+            # Update existing budget
+            budget_row.budget_set = new_budget_value
+        else:
+            # Create new budget
+            budget_row = Budget(
+                user_id=user_id,
+                category=category,
+                sub_category=sub_category,
+                budget_set=new_budget_value
+            )
+            session.add(budget_row)
+
+        session.commit()
+        return redirect(url_for('presupuesto'))
+
+    # ==============
+    #  GET Logic
+    # ==============
+    # Use last transaction date (if exists) instead of today
+    latest_tx = session.query(func.max(Transaction.date)).filter_by(user_id=user_id).scalar()
+
+    if latest_tx:
+        current_year = latest_tx.year
+        current_month = latest_tx.month
+    else:
+        current_year = datetime.now().year
+        current_month = datetime.now().month
+
+    # For fraction of the month
+    days_in_month = monthrange(current_year, current_month)[1]
+    day_of_month = datetime.now().day
+    fraction_of_month = day_of_month / days_in_month if days_in_month else 1
+
+    # (A) Sum of all budgets: "Con tu configuración actual gastarás X al mes"
+    total_budget = session.query(func.sum(Budget.budget_set))\
+                          .filter_by(user_id=user_id)\
+                          .scalar() or 0
+
+    # (B) This month’s spending: "Este mes has gastado un total de X"
+    this_month_spending = session.query(func.sum(Transaction.amount))\
+        .filter(
+            Transaction.user_id == user_id,
+            extract('year', Transaction.date) == current_year,
+            extract('month', Transaction.date) == current_month
+        )\
+        .scalar() or 0
+
+    # (C) 3-month average spending: "En promedio gastas X al mes"
+    # For the last 3 calendar months (including current)
+    # Build a list of (year, month) for [this month, previous month, 2 months ago]
+    months_list = []
+    y = current_year
+    m = current_month
+    for i in range(3):
+        # Calculate year/month going backwards
+        adj_month = m - i
+        adj_year = y
+        if adj_month < 1:
+            adj_month += 12
+            adj_year -= 1
+        months_list.append((adj_year, adj_month))
+
+    three_month_total = 0
+    for (year_m, month_m) in months_list:
+        amt = session.query(func.sum(Transaction.amount))\
+            .filter(
+                Transaction.user_id == user_id,
+                extract('year', Transaction.date) == year_m,
+                extract('month', Transaction.date) == month_m
+            )\
+            .scalar() or 0
+        three_month_total += amt
+
+    three_month_total = three_month_total or 0  # ensure it's not None
+    from decimal import Decimal
+    avg_monthly_spending = three_month_total / Decimal('3.0')
+
+    # 1) Retrieve user budgets
+    user_budgets = session.query(Budget).filter_by(user_id=user_id).all()
+
+    print(f"[DEBUG] {len(user_budgets)} existing budgets for user {user_id}")
+    # 2) Calculate how much user has spent in each (cat, subcat) this month
+    spending_data = (
+        session.query(
+            Transaction.category,
+            func.coalesce(Transaction.sub_category, 'Otros').label('sub_category'),
+            func.sum(Transaction.amount)
+        )
+        .filter(
+            Transaction.user_id == user_id,
+            extract('year', Transaction.date) == current_year,
+            extract('month', Transaction.date) == current_month
+        )
+        .group_by(Transaction.category, func.coalesce(Transaction.sub_category, 'Otros'))
+        .all()
+    )
+    print(f"[DEBUG] Spending data for user {user_id} in {current_year}-{current_month:02d}:")
+    for row in spending_data:
+        print(row)
+
+    # Auto-fill missing budget rows with 0 for new (cat, subcat) pairs
+    existing_budget_keys = set((b.category, b.sub_category) for b in user_budgets)
+    new_budgets = []
+
+    for (cat, subcat, _) in spending_data:
+        key = (cat, subcat)
+        if key not in existing_budget_keys:
+            new_budget = Budget(
+                user_id=user_id,
+                category=cat,
+                sub_category=subcat,
+                budget_set=0.0
+            )
+            session.add(new_budget)
+            new_budgets.append(new_budget)
+
+    if new_budgets:
+        session.commit()
+        print(f"[DEBUG] Added {len(new_budgets)} new budget rows with 0 value.")
+        user_budgets = session.query(Budget).filter_by(user_id=user_id).all()  # 🔁 Re-fetch with new data
+
+
+
+    # 3) Merge budgets + spending into budget_view_data
+    spent_map = {}
+    for (cat, subcat, total_amount) in spending_data:
+        spent_map[(cat, subcat)] = float(total_amount)
+
+    budget_view_data = []
+    for b in user_budgets:
+        usage = spent_map.get((b.category, b.sub_category), 0.0)
+        budget_limit = float(b.budget_set)
+        over_under = budget_limit - usage
+        budget_view_data.append({
+            "category": b.category,
+            "sub_category": b.sub_category,
+            "budget_set": budget_limit,
+            "usage": usage,
+            "over_under": over_under
+        })
+
+    # If you want to show categories that have spending but no budget, do so here
+    for (cat, subcat), spent_amount in spent_map.items():
+        exists = any(
+            x for x in budget_view_data
+            if x["category"] == cat and x["sub_category"] == subcat
+        )
+        if not exists:
+            budget_view_data.append({
+                "category": cat,
+                "sub_category": subcat,
+                "budget_set": 0.0,
+                "usage": spent_amount,
+                "over_under": -spent_amount
+            })
+
+    # optional: total_savings or leftover across categories
+    # (not used if we're switching to your new text, but you can keep it)
+    total_savings = sum(
+        item["over_under"] for item in budget_view_data if item["over_under"] > 0
+    )
+
+    print("[DEBUG] Budget View Data:")
+    for item in budget_view_data:
+        print(item)
+
+
+    # Render template, passing the new summary stats
+    return render_template(
+        "presupuesto.html",
+        budget_data=budget_view_data,
+        fraction_of_month=fraction_of_month,
+        total_savings=total_savings,
+
+        total_budget=total_budget,
+        this_month_spending=this_month_spending,
+        avg_monthly_spending=avg_monthly_spending
+    )
 
 
 

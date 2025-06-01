@@ -318,6 +318,7 @@
 
     .bento-card.purple-theme {
     background-color: #f3e8fd; /* light purple */
+    
     }
     .bento-card.green-theme {
   background-color: #e6f4ea; /* soft green */
@@ -376,8 +377,11 @@
     
 
   <!-- Dark mode toggle -->
-  <button id="theme-toggle">🌙</button>
-  
+  <button id="theme-toggle"
+          style="position: absolute; top: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 1.3rem;">
+    🌙
+  </button>
+    
   <!-- Main content block -->
   <div style="width: 100%; max-width: 700px; margin: 0 auto 40px; text-align: center;">
     <h1>Cuenta Conmigo</h1>
@@ -449,9 +453,51 @@
         </div>
     </div>
 
+
       
   </div>
   
+  <div style="width: 100%; max-width: 640px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 30px;">
+    <article class="bento-card green-theme">
+      <div class="bento-header-wrapper">
+        <header class="bento-header">
+          <div class="bento-eyebrow">
+            <img class="bento-eyebrow-icon" src="{{ url_for('static', filename='images/Presupuesto_icon.png') }}" alt="icono presupuesto" width="32" height="32">
+            <h3 class="bento-eyebrow-text">Presupuesto</h3>
+            <span class="badge badge-muted">Beta</span>
+          </div>
+          <div class="bento-title-wrapper">
+            <h2 class="bento-title">Control de presupuesto mensual</h2>
+          </div>
+        </header>
+      </div>
+      <picture class="bento-image-container">
+        <img class="bento-image" src="{{ url_for('static', filename='images/Presupuesto_image.png') }}" alt="Imagen de presupuesto">
+      </picture>
+      <a class="bento-card-link" href="/presupuesto" aria-label="Ver presupuesto"></a>
+    </article>
+
+    <article class="bento-card purple-theme">
+      <div class="bento-header-wrapper">
+        <header class="bento-header">
+          <div class="bento-eyebrow">
+            <img class="bento-eyebrow-icon" src="{{ url_for('static', filename='images/Insights_icon.png') }}" alt="icono insights" width="32" height="32">
+            <h3 class="bento-eyebrow-text">AI Insights</h3>
+            <span class="badge badge-muted">Nuevo</span>
+          </div>
+          <div class="bento-title-wrapper">
+            <h2 class="bento-title">Recomendaciones personalizadas</h2>
+          </div>
+        </header>
+      </div>
+      <picture class="bento-image-container">
+        <img class="bento-image" src="{{ url_for('static', filename='images/Insights_image.png') }}" alt="Imagen de insights">
+      </picture>
+      <a class="bento-card-link" href="/insights" aria-label="Ver AI Insights"></a>
+    </article>
+
+  </div>
+
       
 
 

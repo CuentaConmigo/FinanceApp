@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Insights</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #fdf6e4, #e4eefc);
+            color: #333;
+            padding: 40px;
+        }
+        .insight-card {
+            border: 2px solid #ddd;
+            border-left: 8px solid #a36bf7;
+            background-color: white;
+            padding: 24px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .insight-card h2 {
+            margin: 0 0 8px 0;
+        }
+        .insight-card .tags {
+            margin-bottom: 12px;
+        }
+        .tag {
+            display: inline-block;
+            background-color: #e0e0e0;
+            color: #555;
+            font-size: 14px;
+            padding: 4px 8px;
+            margin-right: 6px;
+            border-radius: 8px;
+        }
+        .buttons {
+            margin-top: 16px;
+        }
+        .buttons button {
+            padding: 10px 16px;
+            margin-right: 10px;
+            border-radius: 8px;
+            border: none;
+            background-color: #a36bf7;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .buttons button:hover {
+            background-color: #8a4ddf;
+        }
+        .btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        font-size: 1.1rem;
+        font-weight: 500;
+        padding: 14px 26px;
+        border: 2px solid var(--text);
+        border-radius: 30px;
+        background-color: rgba(51, 51, 51, 0.05);
+        color: var(--text);
+        transition: all 0.25s ease;
+        box-shadow: 0 3px 5px var(--shadow);
+    }
+
+    .btn:hover {
+        background-color: var(--accent);
+        color: #fff;
+        transform: translateY(-2px);
+    }
+
+    </style>
+</head>
+<body>
+    <div class="button-container" style="text-align: center; margin-bottom: 30px;">
+        <a href="/" class="btn">Menú de Inicio</a>
+      </div>
+      
+      
+    <h1 style="text-align: center;">🧠 Recomendaciones Personalizadas</h1>
+
+    <div class="insight-card">
+        <h2>📅 Mayo 2025</h2>
+        <div class="tags">
+            <span class="tag">⚠️ Gasto Alto en Delivery</span>
+            <span class="tag">☕ Café Diario</span>
+            <span class="tag">🎯 Potencial de Ahorro: $28.000</span>
+        </div>
+        <p>
+            Gastaste $96.000 en Delivery este mes, superando en un 40% el promedio de usuarios similares en tu región. 
+            Considera agrupar pedidos o cocinar más en casa. El 68% de tus gastos en comida fueron a Uber.
+        </p>
+        <p><strong>📌 Nota sobre Abril:</strong> Bajaste tu gasto en café un 12% respecto al mes pasado. ¡Buen comienzo!</p>
+        <div class="buttons">
+            <button>🔁 Generar Nueva Recomendación</button>
+            <button>💾 Guardar</button>
+        </div>
+    </div>
+
+    <div class="insight-card">
+        <h2>📅 Abril 2025</h2>
+        <div class="tags">
+            <span class="tag">⚠️ Gasto Frecuente en Café</span>
+            <span class="tag">💸 Compras impulsivas</span>
+            <span class="tag">🎯 Potencial de Ahorro: $16.500</span>
+        </div>
+        <p>
+            Realizaste 24 compras de café durante abril, por un total de $38.000, casi el doble del promedio en tu segmento de edad. 
+            La mayoría ocurrieron entre lunes y miércoles a media mañana. Considera preparar café en casa 2 o 3 veces por semana para equilibrar.
+        </p>
+        <div class="buttons">
+            <button>🔁 Generar Nueva Recomendación</button>
+            <button>💾 Guardar</button>
+        </div>
+    </div>
+
+</body>
+</html>
