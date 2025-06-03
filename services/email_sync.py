@@ -57,13 +57,6 @@ def extract_transaction_details(body, sender_domain):
     return None
 
 
-def find_best_match(merchant_name, merchant_dict, threshold=90):
-    if merchant_name:
-        match = process.extractOne(merchant_name, merchant_dict.keys(), score_cutoff=threshold)
-        if match:
-            return match[0], merchant_dict[match[0]]
-    return merchant_name, "Otro"
-
 
 def sync_user_transactions(user_email, full_sync=False):
     synced_count = 0
@@ -77,7 +70,6 @@ def sync_user_transactions(user_email, full_sync=False):
         if not user:
             print("User not found. Aborting sync.")
             return
-        merchant_dict = load_merchant_categories('cleaned_merchants_with_categories.txt')
 
         query = 'from:(simon_gaucho@hotmail.com OR simongrasss@gmail.com)'  # 🔁 Update to match all banks/emails you want
         if not full_sync and user.last_synced:
@@ -125,8 +117,11 @@ def sync_user_transactions(user_email, full_sync=False):
             lean = session.query(LeanMerchant).filter_by(merchant_raw=merchant.merchant_id).first() if merchant else None
 
             if not merchant:
-                match_name, match_cat = find_best_match(tx['Merchant'], merchant_dict)
-                merchant = Merchant(merchant_name=tx['Merchant'], category=match_cat)
+                merchant = Merchant(
+                    merchant_name=tx['Merchant'],
+                    category="No Verificado",
+                    sub_category="No Verificado"
+                )
                 session.add(merchant)
                 session.commit()
 

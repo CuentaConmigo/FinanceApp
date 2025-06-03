@@ -484,11 +484,16 @@ def spending_visualization():
         Transaction.user_id == user_id,
         Transaction.category.isnot(None)
     ).distinct().all()
-    categories = sorted([c[0] for c in user_categories if c[0]])  # Clean list
+    raw_categories = [c[0] for c in user_categories if c[0]]
+    categories = sorted([cat for cat in raw_categories if cat != "No Verificado"])
+    if "No Verificado" in raw_categories:
+        categories.append("No Verificado")
+
 
 
     return render_template(
         'visualization.html',
+        user=user,
         sunburstData=sunburst_data,
         barData=bar_data,
         totalSpending=total_spending,
@@ -580,6 +585,9 @@ def benchmark():
 
     # Function to calculate monthly averages for a set of users
     def calculate_monthly_averages(user_ids):
+        from collections import defaultdict
+
+        # Step 1: Query transactions grouped by user, category, and month
         monthly_totals = session.query(
             Transaction.user_id,
             Transaction.category,
@@ -591,22 +599,33 @@ def benchmark():
             Transaction.user_id, Transaction.category, func.date_trunc('month', Transaction.date)
         ).all()
 
-        user_monthly_averages = {}
+        # Step 2: Organize monthly data per user/category
+        user_months = defaultdict(lambda: defaultdict(list))
         for user_id, category, month, monthly_total in monthly_totals:
-            user_monthly_averages.setdefault(user_id, {}).setdefault(category, []).append(monthly_total)
+            user_months[user_id][category].append((month, monthly_total))
 
-        category_averages = {}
-        for user_id, categories in user_monthly_averages.items():
-            for category, monthly_totals in categories.items():
-                average = sum(monthly_totals) / len(monthly_totals)  # Monthly average for this user
-                category_averages.setdefault(category, []).append(average)
+        category_averages = defaultdict(list)
 
+        for user_id, categories in user_months.items():
+            total_user_avg = 0
+            for category, month_data in categories.items():
+                # Sort months descending to get latest
+                sorted_data = sorted(month_data, key=lambda x: x[0], reverse=True)
+                last_3 = sorted_data[:3]
+                if last_3:
+                    avg = sum(v for _, v in last_3) / len(last_3)
+                    category_averages[category].append(avg)
+                    total_user_avg += avg
+            category_averages["Total Gastos"].append(total_user_avg)
+
+        # Step 3: Final average across users for each category
         group_averages = {
-            category: sum(averages) / len(averages) if averages else 0
-            for category, averages in category_averages.items()
+            category: sum(avgs) / len(avgs) if avgs else 0
+            for category, avgs in category_averages.items()
         }
 
         return group_averages, category_averages
+
 
     # Calculate averages for similar users
     group_averages, similar_category_averages = calculate_monthly_averages(similar_users_ids)
@@ -650,15 +669,56 @@ def benchmark():
     for category, difference in all_differences.items():
         print(f"Category: {category}, Difference: {difference}")
 
+    def sort_categories(d):
+        keys = sorted([k for k in d.keys() if k not in ("Total Gastos", "No Verificado")])
+        if "Total Gastos" in d:
+            keys = ["Total Gastos"] + keys
+        if "No Verificado" in d:
+            keys.append("No Verificado")
+        return {k: d[k] for k in keys}
+
+    user_monthly_averages = sort_categories(user_monthly_averages)
+    group_averages = sort_categories(group_averages)
+    all_averages = sort_categories(all_averages)
+    similar_differences = sort_categories(similar_differences)
+    all_differences = sort_categories(all_differences)
+    ordered_categories = list(user_monthly_averages.keys())
+
+    # Extract month names used in user's average
+    recent_months = []
+
+    # Use bar_data keys to extract month names
+    from calendar import month_name
+    if user.user_id in similar_users_ids:
+        user_tx_months = (
+            session.query(func.date_trunc('month', Transaction.date))
+            .filter(Transaction.user_id == user.user_id)
+            .group_by(func.date_trunc('month', Transaction.date))
+            .order_by(func.date_trunc('month', Transaction.date).desc())
+            .limit(3)
+            .all()
+        )
+        spanish_months = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        recent_months = [spanish_months[m.date().month - 1] for (m,) in reversed(user_tx_months)]
+
+            
+
     # Pass data to the template
     return render_template(
         'benchmark.html',
+        user=user,
         user_spending=user_monthly_averages,
         group_averages=group_averages,
         all_users_averages=all_averages,
         age_range=f"{user_decade_start}-{user_decade_end}",
         similar_differences=similar_differences,
-        all_differences=all_differences
+        all_differences=all_differences,
+        categories=ordered_categories,
+        recent_months=recent_months
+
     )
 
 
@@ -877,35 +937,47 @@ def presupuesto():
         )\
         .scalar() or 0
 
-    # (C) 3-month average spending: "En promedio gastas X al mes"
-    # For the last 3 calendar months (including current)
-    # Build a list of (year, month) for [this month, previous month, 2 months ago]
-    months_list = []
-    y = current_year
-    m = current_month
-    for i in range(3):
-        # Calculate year/month going backwards
-        adj_month = m - i
-        adj_year = y
-        if adj_month < 1:
-            adj_month += 12
-            adj_year -= 1
-        months_list.append((adj_year, adj_month))
+    # (C) Updated logic: compare latest month to average of prior 3 months, include 0s for empty months
+    from collections import OrderedDict
+    from dateutil.relativedelta import relativedelta
+    import datetime as dt
 
-    three_month_total = 0
-    for (year_m, month_m) in months_list:
-        amt = session.query(func.sum(Transaction.amount))\
-            .filter(
-                Transaction.user_id == user_id,
-                extract('year', Transaction.date) == year_m,
-                extract('month', Transaction.date) == month_m
-            )\
-            .scalar() or 0
-        three_month_total += amt
+    # Step 1: Build last 4 calendar months as keys like '2025-01'
+    months_keys = []
+    current = dt.datetime(current_year, current_month, 1)
+    for i in range(4):
+        dt_month = current - relativedelta(months=3 - i)
+        months_keys.append(dt_month.strftime('%Y-%m'))
 
-    three_month_total = three_month_total or 0  # ensure it's not None
-    from decimal import Decimal
-    avg_monthly_spending = three_month_total / Decimal('3.0')
+
+    # Step 2: Get actual spending per year/month
+    monthly_totals_raw = session.query(
+        extract('year', Transaction.date).label('year'),
+        extract('month', Transaction.date).label('month'),
+        func.sum(Transaction.amount).label('total')
+    ).filter(Transaction.user_id == user_id)\
+    .group_by('year', 'month')\
+    .all()
+
+    # Convert to dict: '2025-01' -> 123456.0
+    monthly_map = {
+        f"{int(y)}-{int(m):02d}": float(total)
+        for y, m, total in monthly_totals_raw
+    }
+
+    # Step 3: Fill in any missing months with 0
+    monthly_with_zeros = OrderedDict()
+    for key in months_keys:
+        monthly_with_zeros[key] = monthly_map.get(key, 0)
+
+    # Step 4: Use last month vs average of previous 3
+    values = list(monthly_with_zeros.values())
+    if len(values) == 4:
+        recent = values[-1]
+        prev_3 = values[:3]
+        avg_monthly_spending = sum(prev_3) / 3
+    else:
+        avg_monthly_spending = 0
 
     # 1) Retrieve user budgets
     user_budgets = session.query(Budget).filter_by(user_id=user_id).all()
@@ -1003,7 +1075,7 @@ def presupuesto():
         budget_data=budget_view_data,
         fraction_of_month=fraction_of_month,
         total_savings=total_savings,
-
+        user=user,
         total_budget=total_budget,
         this_month_spending=this_month_spending,
         avg_monthly_spending=avg_monthly_spending

@@ -1,124 +1,224 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>AI Insights</title>
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #fdf6e4, #e4eefc);
-            color: #333;
-            padding: 40px;
-        }
-        .insight-card {
-            border: 2px solid #ddd;
-            border-left: 8px solid #a36bf7;
-            background-color: white;
-            padding: 24px;
-            margin-bottom: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .insight-card h2 {
-            margin: 0 0 8px 0;
-        }
-        .insight-card .tags {
-            margin-bottom: 12px;
-        }
-        .tag {
-            display: inline-block;
-            background-color: #e0e0e0;
-            color: #555;
-            font-size: 14px;
-            padding: 4px 8px;
-            margin-right: 6px;
-            border-radius: 8px;
-        }
-        .buttons {
-            margin-top: 16px;
-        }
-        .buttons button {
-            padding: 10px 16px;
-            margin-right: 10px;
-            border-radius: 8px;
-            border: none;
-            background-color: #a36bf7;
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .buttons button:hover {
-            background-color: #8a4ddf;
-        }
-        .btn {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        text-decoration: none;
-        font-size: 1.1rem;
-        font-weight: 500;
-        padding: 14px 26px;
-        border: 2px solid var(--text);
-        border-radius: 30px;
-        background-color: rgba(51, 51, 51, 0.05);
-        color: var(--text);
-        transition: all 0.25s ease;
-        box-shadow: 0 3px 5px var(--shadow);
+  <meta charset="UTF-8" />
+  <title>Recomendaciones AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #fdfdfc;
+      --text: #222;
+      --card-bg: #ffffff;
+      --border: #eee;
+      --accent: #a36bf7;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+
+    [data-theme='dark'] {
+      --bg: #1e1e1e;
+      --text: #e0e0e0;
+      --card-bg: #2b2b2b;
+      --border: #444;
+      --accent: #c59aff;
+      --shadow: rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 60px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background 0.3s ease, color 0.3s ease;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .insight-card {
+      background: var(--card-bg);
+      border-left: 6px solid var(--accent);
+      border-radius: 16px;
+      box-shadow: 0 10px 20px var(--shadow);
+      padding: 24px 30px;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border);
+    }
+
+    .insight-card h2 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .tag {
+      background: #e0e0e0;
+      color: #555;
+      font-size: 0.85rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    [data-theme='dark'] .tag {
+      background: #444;
+      color: #ccc;
+    }
+
+    .insight-card p {
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .buttons {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .buttons button {
+      background: var(--accent);
+      color: white;
+      font-weight: 500;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 30px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .buttons button:hover {
+      background-color: #8a4ddf;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: 500;
+      padding: 14px 26px;
+      border: 2px solid var(--text);
+      border-radius: 30px;
+      background-color: rgba(51, 51, 51, 0.05);
+      color: var(--text);
+      transition: all 0.25s ease;
+      box-shadow: 0 3px 5px var(--shadow);
     }
 
     .btn:hover {
-        background-color: var(--accent);
-        color: #fff;
-        transform: translateY(-2px);
+      background-color: var(--accent);
+      color: #fff;
+      transform: translateY(-2px);
     }
 
-    </style>
+    .button-container {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    #theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+
+    .user-info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+  </style>
 </head>
 <body>
-    <div class="button-container" style="text-align: center; margin-bottom: 30px;">
-        <a href="/" class="btn">Menú de Inicio</a>
-      </div>
-      
-      
-    <h1 style="text-align: center;">🧠 Recomendaciones Personalizadas</h1>
+  <button id="theme-toggle">🌙</button>
 
-    <div class="insight-card">
-        <h2>📅 Mayo 2025</h2>
-        <div class="tags">
-            <span class="tag">⚠️ Gasto Alto en Delivery</span>
-            <span class="tag">☕ Café Diario</span>
-            <span class="tag">🎯 Potencial de Ahorro: $28.000</span>
-        </div>
-        <p>
-            Gastaste $96.000 en Delivery este mes, superando en un 40% el promedio de usuarios similares en tu región. 
-            Considera agrupar pedidos o cocinar más en casa. El 68% de tus gastos en comida fueron a Uber.
-        </p>
-        <p><strong>📌 Nota sobre Abril:</strong> Bajaste tu gasto en café un 12% respecto al mes pasado. ¡Buen comienzo!</p>
-        <div class="buttons">
-            <button>🔁 Generar Nueva Recomendación</button>
-            <button>💾 Guardar</button>
-        </div>
+  <div class="button-container">
+    <a href="/" class="btn">Menú de Inicio</a>
+  </div>
+
+  <h1>🧠 Recomendaciones Personalizadas</h1>
+
+  <div class="insight-card">
+    <h2>📅 Mayo 2025</h2>
+    <div class="tags">
+      <span class="tag">⚠️ Gasto Alto en Delivery</span>
+      <span class="tag">☕ Café Diario</span>
+      <span class="tag">🎯 Potencial de Ahorro: $28.000</span>
     </div>
-
-    <div class="insight-card">
-        <h2>📅 Abril 2025</h2>
-        <div class="tags">
-            <span class="tag">⚠️ Gasto Frecuente en Café</span>
-            <span class="tag">💸 Compras impulsivas</span>
-            <span class="tag">🎯 Potencial de Ahorro: $16.500</span>
-        </div>
-        <p>
-            Realizaste 24 compras de café durante abril, por un total de $38.000, casi el doble del promedio en tu segmento de edad. 
-            La mayoría ocurrieron entre lunes y miércoles a media mañana. Considera preparar café en casa 2 o 3 veces por semana para equilibrar.
-        </p>
-        <div class="buttons">
-            <button>🔁 Generar Nueva Recomendación</button>
-            <button>💾 Guardar</button>
-        </div>
+    <p>
+      Gastaste <strong>$96.000</strong> en Delivery este mes, superando en un 40% el promedio de usuarios similares en tu región. 
+      Considera agrupar pedidos o cocinar más en casa. El 68% de tus gastos en comida fueron a Uber.
+    </p>
+    <p><strong>📌 Nota sobre Abril:</strong> Bajaste tu gasto en café un 12% respecto al mes pasado. ¡Buen comienzo!</p>
+    <div class="buttons">
+      <button>🔁 Generar Nueva Recomendación</button>
+      <button>💾 Guardar</button>
     </div>
+  </div>
 
+  <div class="insight-card">
+    <h2>📅 Abril 2025</h2>
+    <div class="tags">
+      <span class="tag">⚠️ Gasto Frecuente en Café</span>
+      <span class="tag">💸 Compras impulsivas</span>
+      <span class="tag">🎯 Potencial de Ahorro: $16.500</span>
+    </div>
+    <p>
+      Realizaste 24 compras de café durante abril, por un total de <strong>$38.000</strong>, casi el doble del promedio en tu segmento de edad. 
+      La mayoría ocurrieron entre lunes y miércoles a media mañana. Considera preparar café en casa 2 o 3 veces por semana para equilibrar.
+    </p>
+    <div class="buttons">
+      <button>🔁 Generar Nueva Recomendación</button>
+      <button>💾 Guardar</button>
+    </div>
+  </div>
+
+  <script>
+    const toggle = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+
+    toggle.addEventListener('click', () => {
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
+    });
+  </script>
 </body>
 </html>

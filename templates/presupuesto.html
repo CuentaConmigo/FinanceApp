@@ -1,127 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <title>Presupuesto Mensual</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-
   <style>
-    /* Basic reset/box-sizing */
+    :root {
+      --bg: #fdfdfc;
+      --text: #222;
+      --card-bg: #ffffff;
+      --border: #eee;
+      --accent: #2f80ed;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme='dark'] {
+      --bg: #1e1e1e;
+      --text: #e0e0e0;
+      --card-bg: #2b2b2b;
+      --border: #444;
+      --accent: #5294e2;
+      --shadow: rgba(0, 0, 0, 0.3);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-
     body {
       font-family: 'Roboto', sans-serif;
-      background: linear-gradient(135deg, #fdf6e4, #e4eefc);
-      color: #333;
-      padding: 40px 20px;
-      text-align: center;
-    }
-
-    h1, h2 {
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-
-    .summary-text {
-      margin-bottom: 30px;
-      font-size: 1.2rem;
-      color: #555;
-    }
-
-    /* Container that holds everything */
-    .main-container {
-      width: 80%;
-      max-width: 1000px;
-      margin: 0 auto;
+      background: var(--bg);
+      color: var(--text);
+      padding: 60px 20px 40px;
       display: flex;
       flex-direction: column;
-      gap: 30px;
+      align-items: center;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
-    /* Category block: each category will have a title and subcategory rows */
-    .category-block {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 20px;
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 20px var(--shadow);
+      padding: 30px;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       text-align: left;
+      font-size: 1rem;
+    }
+    .stat-row strong {
+      font-weight: 600;
+    }
+
+    .category-block {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 6px 12px var(--shadow);
+      padding: 24px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border);
+      width: 100%;
     }
 
     .category-title {
       font-size: 1.4rem;
-      margin-bottom: 15px;
-      color: #333;
+      font-weight: 600;
+      margin-bottom: 16px;
     }
 
-    /* Container for all subcategory rows in this category */
-    .subcategory-list {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    /* Each row: subcategory name + bar + leftover + new budget form */
     .subcat-row {
       display: flex;
-      flex-direction: row;
       align-items: center;
       gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
     }
 
-    /* Subcategory name on the left */
     .subcat-name {
-      width: 140px;
+      min-width: 130px;
       font-weight: 500;
     }
 
-    /* The big container for the progress bar. 
-       We'll let it flex-grow to fill horizontal space. */
     .bar-container {
+      position: relative;
       flex-grow: 1;
-      position: relative; /* so we can place leftover text or 'X de Y' inside */
-      height: 30px;
+      height: 26px;
       background-color: #eee;
-      border-radius: 15px;
+      border-radius: 14px;
       overflow: hidden;
     }
+    [data-theme='dark'] .bar-container {
+      background-color: #444;
+    }
 
-    /* The filled portion (usage vs budget) */
     .bar-fill {
       position: absolute;
       top: 0;
       left: 0;
       height: 100%;
-      background-color: #4caf50; /* Green if under budget */
-      border-radius: 15px;
+      background-color: #4CAF50;
+      border-radius: 14px;
       transition: width 0.4s ease;
     }
 
     .over-budget {
-      background-color: #f44336 !important; /* Red if usage > budget */
+      background-color: #f44336 !important;
     }
 
-    /* Show "X de Y" inside the bar (top-right corner) */
     .bar-text {
-        position: absolute;
-        top: 5px;
-        left: 10px;  /* Shift text to the left side */
-        right: auto; /* Ensure we override the 'right' property if previously set */
-        text-align: left; /* If you want the text itself left-aligned */
-        color: #fff;
-        font-size: 0.9rem;
-        font-weight: 500;
-        pointer-events: none;
+      position: absolute;
+      top: 4px;
+      left: 10px;
+      font-size: 0.85rem;
+      color: #fff;
+      font-weight: 500;
+      pointer-events: none;
     }
 
-
-    /* The vertical line for fraction_of_month */
     .month-indicator {
       position: absolute;
       top: 0;
@@ -131,207 +142,149 @@
       opacity: 0.8;
     }
 
-    /* "Quedan" or "Over" text on the right of the bar container, horizontally */
     .leftover-text {
-      width: 120px;
-      font-weight: 500;
+      min-width: 110px;
       text-align: center;
+      font-size: 0.9rem;
+      font-weight: 500;
     }
 
-    /* The new budget form on the far right */
     .budget-edit-form {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 6px;
     }
 
     .budget-edit-form input[type="number"] {
       width: 80px;
-      padding: 5px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      font-size: 0.9rem;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text);
     }
 
     .budget-edit-form button {
       padding: 6px 12px;
       border: none;
       border-radius: 20px;
-      background-color: #333;
-      color: #fff;
-      cursor: pointer;
+      background-color: var(--text);
+      color: var(--bg);
       font-weight: 500;
-      transition: background-color 0.3s ease;
-      font-size: 0.9rem;
-    }
-    .budget-edit-form button:hover {
-      background-color: #555;
+      cursor: pointer;
     }
 
-    /* Buttons at the bottom */
-    .button-container {
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: 500;
+      padding: 12px 24px;
+      border: 2px solid var(--text);
+      border-radius: 30px;
+      background-color: rgba(51, 51, 51, 0.05);
+      color: var(--text);
+      transition: all 0.25s ease;
+      box-shadow: 0 3px 5px var(--shadow);
       margin-top: 40px;
     }
-    .btn {
-      text-decoration: none;
-      font-size: 1.2rem;
-      font-weight: 500;
-      padding: 15px 30px;
-      border: 2px solid #333;
-      border-radius: 30px;
-      background-color: rgba(51, 51, 51, 0.1);
-      color: #333;
-      transition: all 0.3s ease;
-      box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-    }
     .btn:hover {
-      background-color: #333;
+      background-color: var(--accent);
       color: #fff;
-      box-shadow: 0px 8px 12px rgba(0,0,0,0.2);
-    }
-    .stats-row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    margin-bottom: 30px;
+      transform: translateY(-2px);
     }
 
-    .stat-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 20px 30px;
-    min-width: 220px;
-    text-align: center; 
+    #theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 1.3rem;
+      cursor: pointer;
     }
 
-    .stat-card h2 {
-    margin: 0; 
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #333;
-    line-height: 1.3;
+    .user-info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
     }
-
-    .stat-amount {
-    color: #000;
-    font-weight: 700;
-    }
-
-
   </style>
 </head>
 <body>
+  <div class="user-info">👤 Hola, {{ user.name.split(' ')[0] }}</div>
+  <button id="theme-toggle">🌙</button>
 
-
-  
   <h1>Presupuesto Mensual</h1>
-<!-- Stats row (top of presupuesto.html) -->
-  <div class="stats-row">
-    <div class="stat-card">
-        <h2>Presupuesto Mensual:
-            <span class="stat-amount">${{ total_budget|dot_thousands }}</span>
-          </h2>
-          <h2>Este mes has gastado:
-            <span class="stat-amount">${{ this_month_spending|dot_thousands }}</span>
-          </h2>
-          <h2>Promedio de Gasto (últimos 3 meses):
-            <span class="stat-amount">${{ avg_monthly_spending|dot_thousands }}</span>
-          </h2>
+
+  <div class="card">
+    <div class="stat-row">
+      <div>📊 <strong>Presupuesto del mes:</strong> ${{ total_budget|dot_thousands }}</div>
+      <div>💸 <strong>Gasto acumulado:</strong> ${{ this_month_spending|dot_thousands }}</div>
+      <div>📆 <strong>Promedio 3 meses:</strong> ${{ avg_monthly_spending|dot_thousands }}</div>
     </div>
   </div>
-  
-  
 
-  <div class="main-container">
-    {# ------------------------------------- #}
-    {# 1) Group budget_data by category      #}
-    {# ------------------------------------- #}
-    {% set grouped = {} %}
-    {% for item in budget_data %}
-      {% set cat = item.category %}
-      {% if cat not in grouped %}
-        {% set _ = grouped.update({cat: []}) %}
-      {% endif %}
-      {% set _ = grouped[cat].append(item) %}
-    {% endfor %}
+  {% set grouped = {} %}
+  {% for item in budget_data %}
+    {% set _ = grouped.setdefault(item.category, []).append(item) %}
+  {% endfor %}
 
-    {# ------------------------------------- #}
-    {# 2) Render each category block         #}
-    {# ------------------------------------- #}
-    {% for cat, subitems in grouped.items() %}
-    <div class="category-block">
-      <h2 class="category-title">{{ cat }}</h2>
-      <div class="subcategory-list">
-        {% for item in subitems %}
-          {% set usage = item.usage|float %}
-          {% set budget = item.budget_set|float %}
-          {% set leftover = item.over_under|float %}
-          {# usage/budget ratio for bar fill #}
-          {% set ratio = 0 %}
-          {% if budget > 0 %}
-            {% set ratio = (usage / budget * 100) %}
+  {% for cat, items in grouped.items() %}
+  <div class="category-block">
+    <h2 class="category-title">{{ cat }}</h2>
+    {% for item in items %}
+      {% set usage = item.usage|float %}
+      {% set budget = item.budget_set|float %}
+      {% set leftover = item.over_under|float %}
+      {% set ratio = (usage / budget * 100) if budget > 0 else 0 %}
+      {% if ratio > 100 %}{% set ratio = 100 %}{% endif %}
+      {% set month_line = (fraction_of_month * 100)|round(1) %}
+      {% if month_line > 100 %}{% set month_line = 100 %}{% endif %}
+      <div class="subcat-row">
+        <div class="subcat-name">{{ item.sub_category or 'General' }}</div>
+        <div class="bar-container">
+          <div class="bar-fill {% if usage > budget %}over-budget{% endif %}" style="width: {{ ratio|round(1) }}%;"></div>
+          <div class="bar-text">${{ usage|dot_thousands }} / ${{ budget|dot_thousands }}</div>
+          <div class="month-indicator" style="left: {{ month_line }}%;"></div>
+        </div>
+        <div class="leftover-text">
+          {% if leftover < 0 %}
+            <span style="color:red;">Sobre: ${{ (leftover|abs)|dot_thousands }}</span>
+          {% else %}
+            <span style="color:green;">Quedan: ${{ leftover|dot_thousands }}</span>
           {% endif %}
-          {% if ratio > 100 %}
-            {% set ratio = 100 %}
-          {% endif %}
-
-          <div class="subcat-row">
-            <!-- 1) Subcat name -->
-            <div class="subcat-name">
-              {{ item.sub_category if item.sub_category else 'General' }}
-            </div>
-
-            <!-- 2) Bar container -->
-            <div class="bar-container">
-              <!-- Filled portion -->
-              <div class="bar-fill {% if usage > budget %}over-budget{% endif %}"
-                   style="width: {{ ratio|round(1) }}%;">
-              </div>
-
-              {# "X de Y" text inside the bar at top-right #}
-              <div class="bar-text">
-                {{ usage|dot_thousands }} / {{ budget|dot_thousands }}
-              </div>
-              
-              {# fraction_of_month vertical line #}
-              {% set month_line = (fraction_of_month * 100)|round(1) %}
-              {% if month_line > 100 %}
-                {% set month_line = 100 %}
-              {% endif %}
-              <div class="month-indicator" style="left: {{ month_line }}%;"></div>
-            </div>
-
-            <!-- 3) Leftover or Over text -->
-            <div class="leftover-text">
-              {% if leftover < 0 %}
-                <span style="color:red;">Sobre: ${{ (leftover|abs)|dot_thousands }}</span>
-              {% else %}
-                <span style="color:green;">Quedan: ${{ leftover|dot_thousands }}</span>
-              {% endif %}
-            </div>
-
-            <!-- 4) New Budget Form -->
-            <form method="POST" class="budget-edit-form">
-              <input type="hidden" name="category" value="{{ cat }}">
-              <input type="hidden" name="sub_category" value="{{ item.sub_category }}">
-              
-              <label for="budget_set" style="font-size:0.85rem;">Nuevo:</label>
-              <input type="number" step="1" name="budget_set" value="{{ budget|int }}">
-              <button type="submit">OK</button>
-            </form>
-          </div> <!-- .subcat-row -->
-        {% endfor %}
-      </div> <!-- .subcategory-list -->
-    </div> <!-- .category-block -->
+        </div>
+        <form method="POST" class="budget-edit-form">
+          <input type="hidden" name="category" value="{{ cat }}">
+          <input type="hidden" name="sub_category" value="{{ item.sub_category }}">
+          <label for="budget_set" style="font-size: 0.85rem;">Nuevo:</label>
+          <input type="number" step="1" name="budget_set" value="{{ budget|int }}">
+          <button type="submit">OK</button>
+        </form>
+      </div>
     {% endfor %}
-  </div> <!-- .main-container -->
-
-  <!-- Button to return home -->
-  <div class="button-container">
-    <a href="/" class="btn">Menú de Inicio</a>
   </div>
+  {% endfor %}
+
+  <a href="/" class="btn">Menú de Inicio</a>
+
+  <script>
+    const toggle = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+    toggle.addEventListener('click', () => {
+      const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      toggle.textContent = newTheme === 'dark' ? '🌞' : '🌙';
+    });
+  </script>
 </body>
 </html>

@@ -7,34 +7,56 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Ensure consistent box sizing */
+        :root {
+            --bg: #fdfdfc;
+            --text: #222;
+            --card-bg: #ffffff;
+            --border: #eee;
+            --accent: #2f80ed;
+            --shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme='dark'] {
+            --bg: #1e1e1e;
+            --text: #e0e0e0;
+            --card-bg: #2b2b2b;
+            --border: #444;
+            --accent: #5294e2;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
         * {
             box-sizing: border-box;
         }
 
         body {
             font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #fdf6e4, #e4eefc);
-            color: #333;
-            margin: 0;
+            padding: 60px 20px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         h1, h2 {
             font-family: 'Roboto', sans-serif;
             font-weight: 700;
-            color: #333;
+            color: var(--text);
             margin-bottom: 20px;
         }
+
 
         .chart-container {
             width: 80%;
             max-width: 1000px;
             margin: 40px auto;
-            background: #fff;
+            background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 20px var(--shadow);
+            border: 1px solid var(--border);
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -54,27 +76,51 @@
         }
 
         .btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             text-decoration: none;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 500;
-            padding: 15px 30px;
-            border: 2px solid #333;
+            padding: 14px 26px;
+            border: 2px solid var(--text);
             border-radius: 30px;
-            background-color: rgba(51, 51, 51, 0.1);
-            color: #333;
-            transition: all 0.3s ease;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: rgba(51, 51, 51, 0.05);
+            color: var(--text);
+            transition: all 0.25s ease;
+            box-shadow: 0 3px 5px var(--shadow);
         }
 
         .btn:hover {
-            background-color: #333;
+            background-color: var(--accent);
             color: #fff;
-            box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
         }
+
     </style>
 </head>
 <body>
+    <!-- Dark Mode Toggle Button -->
+    <button id="theme-toggle"
+    style="position: absolute; top: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 1.3rem;">
+    🌙
+    </button>
+
+    <div style="position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-size: 0.9rem; opacity: 0.7;">
+          👤 Hola, {{ user.name.split(' ')[0] }}
+        </div>
+        <a href="/" class="btn" style="width: fit-content;">Menú de Inicio</a>
+      </div>
+      
+
     <h1>Comparación de Gasto</h1>
+
+    {% if recent_months %}
+        <p style="font-weight: 500; color: #888; margin-top: -10px;">
+            Promedio {{ recent_months | join(', ') }}
+        </p>
+    {% endif %}
 
     <!-- Chart for similar users by age -->
     <div class="chart-container">
@@ -96,106 +142,168 @@
         const userSpending = {{ user_spending | tojson }};
         const groupAverages = {{ group_averages | tojson }};
         const allUsersAverages = {{ all_users_averages | tojson }};
-        const categories = Object.keys(userSpending);
-    
+        const categories = {{ categories | tojson }};
+        
         function getColors(deviations) {
-            return deviations.map(value => value >= 0 ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)');
+            return categories.map((cat, i) => {
+                if (cat === 'No Verificado') {
+                    return 'rgba(150, 150, 150, 0.6)';  // light gray
+                }
+                return deviations[i] >= 0 ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)';
+            });
         }
+        function getTextColor() {
+            return getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+        }
+
+        function updateChartColors(chart) {
+            const textColor = getTextColor();
+            chart.options.scales.x.ticks.color = textColor;
+            chart.options.scales.x.title.color = textColor;
+            chart.options.scales.y.ticks.color = textColor;
+            chart.options.scales.y.title.color = textColor;
+            chart.update();
+        }
+
+
     
         // Render chart for similar users
-        const ageCtx = document.getElementById('ageBenchmarkChart').getContext('2d');
-        const groupDeviations = categories.map(cat => userSpending[cat] - groupAverages[cat]);
-        new Chart(ageCtx, {
-            type: 'bar',
-            data: {
-                labels: categories,
-                datasets: [{
-                    label: 'Diferencia (Usuario vs Promedio de Edad)',
-                    data: groupDeviations,
-                    backgroundColor: getColors(groupDeviations),
-                    borderColor: getColors(groupDeviations),
-                    borderWidth: 1,
-                    borderRadius: 5, // Add rounded corners
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: true, // Ensure consistent aspect ratio
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#333',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        cornerRadius: 4,
+        let ageChart, overallChart;
+        function renderCharts() {
+            const ageCtx = document.getElementById('ageBenchmarkChart').getContext('2d');
+            const groupDeviations = categories.map(cat => userSpending[cat] - groupAverages[cat]);
+            ageChart = new Chart(ageCtx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: 'Diferencia (Usuario vs Promedio de Edad)',
+                        data: groupDeviations,
+                        backgroundColor: getColors(groupDeviations),
+                        borderColor: getColors(groupDeviations),
+                        borderWidth: 1,
+                        borderRadius: 5, // Add rounded corners
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true, // Ensure consistent aspect ratio
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#333',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            cornerRadius: 4,
+                        },
+                    },
+                    layout: {
+                        padding: { top: 20, right: 20, bottom: 20, left: 20 },
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Diferencia en Gasto (CLP)' },
+                            grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
+                            ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                        },
+                        y: {
+                            title: { display: true, text: 'Categorías', color:  getComputedStyle(document.documentElement).getPropertyValue('--text').trim() },
+                            grid: { display: false },
+                            ticks: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: ctx => {
+                                    return {
+                                        size: 12,
+                                        family: 'Roboto',
+                                        weight: ctx.tick.label === 'Total Gastos' ? 'bold' : 'normal'
+                                    };
+                                }
+                            },
+                        }
                     },
                 },
-                layout: {
-                    padding: { top: 20, right: 20, bottom: 20, left: 20 },
+            });
+            updateChartColors(ageChart);
+
+        
+            // Render chart for all users
+            const overallCtx = document.getElementById('overallBenchmarkChart').getContext('2d');
+            const overallDeviations = categories.map(cat => userSpending[cat] - allUsersAverages[cat]);
+            overallChart =new Chart(overallCtx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: 'Diferencia (Usuario vs Promedio General)',
+                        data: overallDeviations,
+                        backgroundColor: getColors(overallDeviations),
+                        borderColor: getColors(overallDeviations),
+                        borderWidth: 1,
+                        borderRadius: 5, // Add rounded corners
+                    }]
                 },
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Diferencia en Gasto (CLP)', color: '#555' },
-                        grid: { color: '#ddd' },
-                        ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true, // Ensure consistent aspect ratio
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#333',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            cornerRadius: 4,
+                        },
                     },
-                    y: {
-                        title: { display: true, text: 'Categorías', color: '#333' },
-                        grid: { display: false },
-                        ticks: { color: '#333', font: { size: 12, family: 'Roboto' } },
-                    }
+                    layout: {
+                        padding: { top: 20, right: 20, bottom: 20, left: 20 },
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Diferencia en Gasto (CLP)'},
+                            grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
+                            ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                        },
+                        y: {
+                            title: { display: true, text: 'Categorías', color:  getComputedStyle(document.documentElement).getPropertyValue('--text').trim() },
+                            grid: { display: false },
+                            ticks: {
+                                color:  getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: ctx => {
+                                    return {
+                                        size: 12,
+                                        family: 'Roboto',
+                                        weight: ctx.tick.label === 'Total Gastos' ? 'bold' : 'normal'
+                                    };
+                                }
+                            },
+                        }
+                    },
                 },
-            },
-        });
+            });
+            updateChartColors(overallChart);
+        }
+
+    </script>
+  
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+        renderCharts();
     
-        // Render chart for all users
-        const overallCtx = document.getElementById('overallBenchmarkChart').getContext('2d');
-        const overallDeviations = categories.map(cat => userSpending[cat] - allUsersAverages[cat]);
-        new Chart(overallCtx, {
-            type: 'bar',
-            data: {
-                labels: categories,
-                datasets: [{
-                    label: 'Diferencia (Usuario vs Promedio General)',
-                    data: overallDeviations,
-                    backgroundColor: getColors(overallDeviations),
-                    borderColor: getColors(overallDeviations),
-                    borderWidth: 1,
-                    borderRadius: 5, // Add rounded corners
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: true, // Ensure consistent aspect ratio
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#333',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        cornerRadius: 4,
-                    },
-                },
-                layout: {
-                    padding: { top: 20, right: 20, bottom: 20, left: 20 },
-                },
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Diferencia en Gasto (CLP)', color: '#555' },
-                        grid: { color: '#ddd' },
-                        ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
-                    },
-                    y: {
-                        title: { display: true, text: 'Categorías', color: '#333' },
-                        grid: { display: false },
-                        ticks: { color: '#333', font: { size: 12, family: 'Roboto' } },
-                    }
-                },
-            },
+        toggle.addEventListener('click', () => {
+        const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
+        updateChartColors(ageChart);
+        updateChartColors(overallChart);
         });
     </script>
-    
+  
 </body>
 </html>

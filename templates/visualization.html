@@ -10,12 +10,38 @@
         <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            :root {
+                --bg: #fdfdfc;
+                --text: #222;
+                --card-bg: #ffffff;
+                --border: #eee;
+                --accent: #2f80ed;
+                --shadow: rgba(0, 0, 0, 0.08);
+            }
+
+            [data-theme='dark'] {
+                --bg: #1e1e1e;
+                --text: #e0e0e0;
+                --card-bg: #2b2b2b;
+                --border: #444;
+                --accent: #5294e2;
+                --shadow: rgba(0, 0, 0, 0.3);
+            }
             body {
                 font-family: 'Roboto', sans-serif;
+                background: var(--bg);
+                color: var(--text);
                 text-align: center;
-                padding: 20px;
-                background: linear-gradient(135deg, #fdf6e4, #e4eefc); /* Light gradient for consistency */
-                color: #333; /* Dark text for contrast */            }
+                padding: 60px 20px 40px;
+                transition: background 0.3s ease, color 0.3s ease;
+            }
+
+            h1, h2 {
+                font-family: 'Roboto', sans-serif;
+                font-weight: 700;
+                color: var(--text);
+            }
+
 
             .chart-container {
                 position: relative;
@@ -43,11 +69,7 @@
                 width: 900px;  
                 height: 600px; 
             }
-            h1, h2 {
-                font-family: 'Roboto', sans-serif;
-                font-weight: 700; /* Bold for headings */
-                color: #333;
-            }
+
             .home-link {
                 margin-top: 20px;
                 display: block;
@@ -76,21 +98,25 @@
                 justify-content: center;
             }
             .btn {
+                display: flex;
+                align-items: center;
+                gap: 10px;
                 text-decoration: none;
-                font-size: 1.2rem;
+                font-size: 1.1rem;
                 font-weight: 500;
-                padding: 15px 30px;
-                border: 2px solid #333; /* Dark border for contrast */
+                padding: 14px 26px;
+                border: 2px solid var(--text);
                 border-radius: 30px;
-                background-color: rgba(51, 51, 51, 0.1); /* Subtle dark overlay */
-                color: #333; /* Dark text */
-                transition: all 0.3s ease;
-                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+                background-color: rgba(51, 51, 51, 0.05);
+                color: var(--text);
+                transition: all 0.25s ease;
+                box-shadow: 0 3px 5px var(--shadow);
             }
+
             .btn:hover {
-                background-color: #333; /* Darker hover effect */
-                color: #fff; /* White text on hover */
-                box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
+                background-color: var(--accent);
+                color: #fff;
+                transform: translateY(-2px);
             }
             form#month-form {
             margin: 20px 0;
@@ -110,6 +136,21 @@
     
     
 <body>
+    <!-- Dark Mode Toggle -->
+    <button id="theme-toggle"
+    style="position: absolute; top: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 1.3rem;">
+    🌙
+    </button>
+
+    <!-- User greeting + Home button -->
+    <div style="position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 5px;">
+    <div style="font-size: 0.9rem; opacity: 0.7;">
+        👤 Hola, {{ user.name.split(' ')[0] }}
+    </div>
+    <a href="/" class="btn" style="width: fit-content;">Menú de Inicio</a>
+    </div>
+
+
     <h1>Visualización de Gastos</h1>
 
     <!-- Month Selector Form -->
@@ -149,7 +190,7 @@
     <form id="category-form" style="margin-bottom: 20px;" onsubmit="return false;">
         <label for="category">Filtrar por Categoría:</label>
         <select id="category" name="category">
-            <option value="all" {% if selected_category == 'all' %}selected{% endif %}>Mostrar todas</option>
+            <option value="all" {% if selected_category == 'all' %}selected{% endif %}>Total</option>
             {% for cat in categories %}
             <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
             {% endfor %}
@@ -163,7 +204,7 @@
     
     <h2>  Gastos por Mes{% if category_filter != 'all' %}: {{ category_filter }}{% endif %}</h2>
     {% if rolling_summary %}
-    <div style="margin-top: 20px; margin-bottom: 30px; font-size: 18px; color: #333;">
+    <div style="margin-top: 20px; margin-bottom: 30px; font-size: 18px; color: var(--text);">
         {% macro format_number(n) -%}
         {{ "{:,.0f}".format(n).replace(",", ".") }}
         {%- endmacro %}
@@ -401,7 +442,7 @@
                         title: {
                             display: true,
                             text: 'Mes',
-                            color: '#333',
+                            color: '#666',
                             font: {
                                 family: 'Roboto',
                                 size: 16,
@@ -410,7 +451,7 @@
                         },
 
                         ticks: {
-                            color: '#333', // Darker text for better contrast
+                            color: '#666', 
                             font: {
                                 family: 'Roboto',
                                 size: 14, // Increase font size
@@ -425,7 +466,7 @@
                         title: {
                             display: true,
                             text: 'Gasto Total',
-                            color: '#555',
+                            color: '#666',
                             font: {
                                 family: 'Roboto',
                                 size: 14,
@@ -433,7 +474,7 @@
                             }
                         },
                         ticks: {
-                            color: '#333',
+                            color: '#666',
                             font: {
                                 family: 'Roboto',
                                 size: 14,
@@ -458,6 +499,7 @@
             },
             plugins: [ChartDataLabels] // Ensure DataLabels plugin is active
         });
+
 
     </script>
 
@@ -618,6 +660,50 @@
         yearSelect.addEventListener("change", updateSunburstChart);
         monthSelect.addEventListener("change", updateSunburstChart);
     </script>
+    <script>
+        function getTextColor() {
+            return getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+        }
+    
+        function getAxisColor() {
+            return getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+        }
+    
+        function updateChartColors(chart) {
+            const textColor = getTextColor();
+            const axisColor = getAxisColor();
+    
+            chart.options.scales.x.title.color = textColor;
+            chart.options.scales.x.ticks.color = textColor;
+            chart.options.scales.y.title.color = textColor;
+            chart.options.scales.y.ticks.color = textColor;
+            chart.options.scales.x.grid.color = axisColor;
+            chart.options.scales.y.grid.color = axisColor;
+    
+            chart.update();
+        }
+    </script>
+    
+    <script>
+        const toggle = document.getElementById('theme-toggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+    
+        window.addEventListener('DOMContentLoaded', () => {
+            updateChartColors(monthlyChart);
+        });
+    
+        toggle.addEventListener('click', () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
+            updateChartColors(monthlyChart);
+        });
+    </script>
+    
     
     
 
