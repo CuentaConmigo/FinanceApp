@@ -6,12 +6,16 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic, Budget, OAuthToken
-from datetime import datetime, date
+from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic, Budget, OAuthToken, Insight
+from datetime import datetime, date, timedelta
 from sqlalchemy.types import Integer  # Add this line
 from calendar import monthrange
 from services.email_sync import sync_user_transactions
 from services.auth_helpers import get_credentials
+from collections import defaultdict, Counter
+from openai import OpenAI
+from dotenv import load_dotenv
+load_dotenv()
 
 
 
@@ -506,10 +510,6 @@ def spending_visualization():
   
 
     )
-
-@app.route('/insights')
-def insights():
-    return render_template("insights.html")
 
 
 
@@ -1081,7 +1081,315 @@ def presupuesto():
         avg_monthly_spending=avg_monthly_spending
     )
 
+@app.route('/insights')
+def insights():
+    # Fetch user details
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        return redirect(url_for('questionnaire'))
+    user_id = user.user_id
+    user_income = user.income
 
+    # --- Step 1: Get last full month ---
+    today = date.today()
+    first_day_this_month = date(today.year, today.month, 1)
+    last_month = first_day_this_month - timedelta(days=1)
+    #target_month = last_month.month
+    #target_year = last_month.year
+    target_month = 12
+    target_year = 2024
+    spanish_months = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+
+
+    # --- Step 2: Check if insight already exists ---
+    existing = session.query(Insight).filter_by(
+        user_id=user_id,
+        month=target_month,
+        year=target_year
+    ).order_by(Insight.version.desc()).first()
+
+    if existing:
+        all_insights = session.query(Insight).filter_by(user_id=user_id).order_by(Insight.year.desc(), Insight.month.desc(), Insight.version.desc()).all()
+        return render_template(
+            "insights.html",
+            insight=existing.content,
+            current_month_name=last_month.strftime('%B'),
+            current_year=target_year,
+            all_insights=all_insights,
+            insight_generated_this_month=True,
+            spanish_months=spanish_months
+        )
+
+    # --- Step 3: Get verified transactions for last month ---
+    transactions = session.query(Transaction).filter(
+        Transaction.user_id == user_id,
+        func.extract('month', Transaction.date) == target_month,
+        func.extract('year', Transaction.date) == target_year,
+        Transaction.category != "No Verificado"
+    ).all()
+
+    if not transactions:
+        all_insights = session.query(Insight).filter_by(user_id=user_id).order_by(
+            Insight.year.desc(), Insight.month.desc(), Insight.version.desc()
+        ).all()
+        return render_template(
+            "insights.html",
+            all_insights=all_insights,
+            current_month_name=last_month.strftime('%B'),
+            current_year=target_year,
+            insight_generated_this_month=False,
+            spanish_months=spanish_months
+        )
+
+    # --- Step 3.5: Abort if any unverified transactions exist ---
+    unverified_count = session.query(Transaction).filter(
+        Transaction.user_id == user_id,
+        func.extract('month', Transaction.date) == target_month,
+        func.extract('year', Transaction.date) == target_year,
+        Transaction.category == "No Verificado"
+    ).count()
+
+    print(f"[DEBUG] Unverified transactions for target month: {unverified_count}")
+
+    if unverified_count > 0:
+        print("[DEBUG] Blocking insight generation due to unverified transactions.")
+        all_insights = session.query(Insight).filter_by(user_id=user_id).order_by(
+            Insight.year.desc(), Insight.month.desc(), Insight.version.desc()
+        ).all()
+        return render_template(
+            "insights.html",
+            all_insights=all_insights,
+            current_month_name=last_month.strftime('%B'),
+            current_year=target_year,
+            insight_generated_this_month=False,
+            spanish_months=spanish_months
+
+        )
+
+
+    # --- Step 4: Summarize data ---
+    total_spent = sum(t.amount for t in transactions)
+    spent_pct_income = (total_spent / user_income * 100) if user_income else None
+    num_tx = len(transactions)
+    unique_merchants = len(set(t.merchant_fixed for t in transactions))
+    largest_tx = max(t.amount for t in transactions)
+
+    from decimal import Decimal
+    category_spending = defaultdict(lambda: Decimal('0.0'))
+    for t in transactions:
+        category_spending[t.category] += t.amount
+    top_cat, top_cat_amt = max(category_spending.items(), key=lambda x: x[1])
+    top_cat_pct = (top_cat_amt / total_spent) * 100
+    estimated_savings = int(Decimal("0.2") * top_cat_amt)
+
+    merchant_counter = Counter(t.merchant_fixed for t in transactions)
+    top_merchant, merchant_count = merchant_counter.most_common(1)[0]
+    # Estimate if top merchant is a small-ticket one (e.g. coffee)
+    merchant_amounts = defaultdict(list)
+    for t in transactions:
+        merchant_amounts[t.merchant_fixed].append(t.amount)
+
+    # Get average ticket size for most frequent merchant
+    avg_ticket_top_merchant = sum(merchant_amounts[top_merchant]) / len(merchant_amounts[top_merchant])
+
+    # If it's low (e.g. < $8,000), we can reference it in creative tip
+    is_low_ticket = avg_ticket_top_merchant < 8000
+    monthly_savings_if_skipped_2 = int(avg_ticket_top_merchant * 2)
+
+        # --- Extra Insight: Top Merchants and Categories ---
+
+    # Top 5 merchants by number of transactions
+    merchant_tx_count = Counter(t.merchant_fixed for t in transactions)
+    merchant_amounts = defaultdict(list)
+
+    for t in transactions:
+        merchant_amounts[t.merchant_fixed].append(t.amount)
+
+    top_merchants_data = []
+    for merchant, count in merchant_tx_count.most_common(5):
+        amounts = merchant_amounts[merchant]
+        avg_ticket = sum(amounts) / len(amounts) if amounts else 0
+        top_merchants_data.append({
+            "merchant": merchant,
+            "transactions": count,
+            "avg_ticket": float(avg_ticket)
+        })
+
+    # Format string for prompt
+    top_merchants_str = "\n".join(
+        f"- {m['merchant']}: {m['transactions']} transacciones, ticket promedio ${m['avg_ticket']:,.0f}"
+        for m in top_merchants_data
+    )
+
+    # Top 3 categories by number of transactions
+    category_tx_count = Counter(t.category for t in transactions)
+    category_amounts = defaultdict(list)
+
+    for t in transactions:
+        category_amounts[t.category].append(t.amount)
+
+    top_categories_data = []
+    for category, count in category_tx_count.most_common(3):
+        amounts = category_amounts[category]
+        avg_ticket = sum(amounts) / len(amounts) if amounts else 0
+        top_categories_data.append({
+            "category": category,
+            "transactions": count,
+            "avg_ticket": float(avg_ticket)
+        })
+
+    top_categories_str = "\n".join(
+        f"- {c['category']}: {c['transactions']} transacciones, ticket promedio ${c['avg_ticket']:,.0f}"
+        for c in top_categories_data
+    )
+
+
+    # --- Step 6: Peer Benchmark (Age-based) ---
+    age = (datetime.now().year - user.dob.year) if user.dob else None
+    decade_start = (age // 10) * 10
+    decade_end = decade_start + 9
+
+    similar_user_ids = session.query(UserCharacteristic.user_id).filter(
+        between((datetime.now().year - func.date_part('year', UserCharacteristic.dob)).cast(Integer), decade_start, decade_end)
+    ).all()
+    similar_user_ids = [u[0] for u in similar_user_ids]
+
+    def calculate_monthly_averages(user_ids):
+        from collections import defaultdict
+
+        monthly_totals = session.query(
+            Transaction.user_id,
+            Transaction.category,
+            func.date_trunc('month', Transaction.date).label('month'),
+            func.sum(Transaction.amount).label('monthly_total')
+        ).filter(
+            Transaction.user_id.in_(user_ids)
+        ).group_by(
+            Transaction.user_id, Transaction.category, func.date_trunc('month', Transaction.date)
+        ).all()
+
+        user_months = defaultdict(lambda: defaultdict(list))
+        for user_id, category, month, monthly_total in monthly_totals:
+            user_months[user_id][category].append((month, monthly_total))
+
+        category_averages = defaultdict(list)
+
+        for user_id, categories in user_months.items():
+            total_user_avg = 0
+            for category, month_data in categories.items():
+                sorted_data = sorted(month_data, key=lambda x: x[0], reverse=True)
+                last_3 = sorted_data[:3]
+                if last_3:
+                    avg = sum(v for _, v in last_3) / len(last_3)
+                    category_averages[category].append(avg)
+                    total_user_avg += avg
+            category_averages["Total Gastos"].append(total_user_avg)
+
+        group_averages = {
+            category: sum(avgs) / len(avgs) if avgs else 0
+            for category, avgs in category_averages.items()
+        }
+
+        return group_averages, category_averages
+
+    peer_averages, _ = calculate_monthly_averages(similar_user_ids)
+    peer_avg_spent = peer_averages.get("Total Gastos", 0)
+
+    # --- Step 7: Prompt ---
+
+    month_str = spanish_months[target_month - 1]
+    category_breakdown_str = "\n".join(f"  - {cat}: ${amt:,.0f}" for cat, amt in category_spending.items())
+
+    prompt = f"""
+    Eres un asesor financiero cálido, chileno y cercano. Cada mes acompañas al usuario con un resumen claro y simple de sus finanzas.
+
+    Este mes estás analizando sus gastos de {month_str}. Usa un tono directo, amable y sin tecnicismos, como si hablaras con un conocido. Escribe **solo en formato de viñetas** (bullet points), sin saludos ni despedidas largas.
+
+    Incluye ideas útiles basadas en los datos. Si un dato no aporta una recomendación concreta, puedes omitirlo.
+
+    - 📊 Compara su gasto total con el promedio de su grupo etario y explica qué significa.
+    - 💳 Comenta si hizo muchas compras chicas o pocas grandes, pero solo si puedes dar un consejo útil relacionado.
+    - 💰 Si su gasto representa un porcentaje alto de su ingreso, analiza si es preocupante según su edad o contexto. Si no tienes suficiente contexto, puedes omitirlo.
+    - 💡 Da una recomendación estándar: analiza [desglose por categoria, gastos por categoría o comercio], y si consideras que alguna esta particularmente alta o costosa, di cuánto representa del total, y sugiere una reducción. Puedes proponer reducir entre un 10% y 30% u otro monto razonable, o sugerir otra estrategia. Usa tu criterio para elegir la categoría o comercio con insight más relevante.
+    - 💡 Si hay un patron de gasto repetitivo, da una idea creativa realista: reducir la frecuencia, buscar alternativas o invertir en algo útil. Estima cuánto podría ahorrar al mes, y si aplica, cuánto demoraría en recuperar la inversión.
+    - 🤪 Cierra con una **idea creativa y poco convencional**, que lo motive a mejorar sin que suene a consejo repetido. Aquí pueden ser ideas del estilo (pero no exactamente..):  planificar un "dia sin gastar",  invertir en una cafetera, hacer competencia de cocina con amigos,hacer trueque con amigos, usar apps de descuentos, establecer desafíos personales de ahorro, etc. Sé atrevido y no te apegues solo a estos ejemplos. Usa un emoji como 🤪 o 🧠💥. 
+    - 🙋‍♂️ Termina con una frase breve y profesional como: “Nos vemos el próximo mes para seguir avanzando.”
+
+    Datos del usuario:
+    - Total gastado: ${total_spent:,.0f}
+    - Ingreso mensual: ${user_income:,.0f}{" (estimado)" if user_income else ""}
+    - Transacciones totales: {num_tx}
+    - Gasto mayor: ${largest_tx:,.0f}
+    - Comercios únicos: {unique_merchants}
+    - Comercio más frecuente: {top_merchant} ({merchant_count} compras)
+    - Promedio gasto grupo etario ({decade_start}-{decade_end}): ${peer_avg_spent:,.0f}
+
+    Desglose por categoría:
+    {category_breakdown_str}
+
+    Top comercios frecuentes del mes:
+    {top_merchants_str}
+
+    Categorías con más movimiento:
+    {top_categories_str}
+
+    Comercio más repetido: {top_merchant}
+    Ticket promedio en ese comercio: ${avg_ticket_top_merchant:,.0f}
+    ¿Ticket pequeño? {"Sí" if is_low_ticket else "No"}
+    Ahorro mensual si evita 2 compras: ${monthly_savings_if_skipped_2:,.0f} (Asegúrate que si recomiendas evitar compras..sea por que hubo más transacciones en este comrercio al mes que lo que propones ahorrar)
+
+
+    Redacta solo texto plano, breve, y con viñetas.
+    """
+
+
+
+
+    print("[DEBUG] Prompt\n", prompt)
+
+    # --- Step 8: LLM ---
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Eres un experto en bienestar financiero que entrega consejos concretos y cercanos."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=400,
+        temperature=0.8
+    )
+    content = response.choices[0].message.content
+
+    # --- Step 9: Save ---
+    insight = Insight(
+        user_id=user_id,
+        year=target_year,
+        month=target_month,
+        version=1,
+        content=content,
+        tokens_used=response.usage.total_tokens if hasattr(response, 'usage') else None
+    )
+    session.add(insight)
+    session.commit()
+
+    insight_generated_this_month = True  # Because we just generated one
+    all_insights = session.query(Insight).filter_by(user_id=user_id).order_by(
+        Insight.year.desc(), Insight.month.desc(), Insight.version.desc()
+    ).all()
+
+    return render_template(
+        "insights.html",
+        all_insights=all_insights,
+        current_month_name=month_str,
+        current_year=target_year,
+        insight_generated_this_month=insight_generated_this_month,
+        spanish_months=spanish_months
+
+    )
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime,ForeignKey, func, Text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker,relationship
+from datetime import datetime
 
 
 Base = declarative_base()
@@ -79,6 +80,19 @@ class OAuthToken(Base):
     client_id = Column(Text)
     client_secret = Column(Text)
     scopes = Column(Text)
+
+
+class Insight(Base):
+    __tablename__ = 'insights'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user_characteristics.user_id'))
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+    version = Column(Integer, default=1)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    tokens_used = Column(Integer)
+
 
 
 # Create all tables in the database

@@ -152,7 +152,9 @@
       font-size: 1.3rem;
       cursor: pointer;
     }
-
+    .tag {
+    margin-bottom: 8px;
+    }
     .user-info {
       position: absolute;
       top: 20px;
@@ -171,41 +173,24 @@
 
   <h1>🧠 Recomendaciones Personalizadas</h1>
 
-  <div class="insight-card">
-    <h2>📅 Mayo 2025</h2>
-    <div class="tags">
-      <span class="tag">⚠️ Gasto Alto en Delivery</span>
-      <span class="tag">☕ Café Diario</span>
-      <span class="tag">🎯 Potencial de Ahorro: $28.000</span>
+  {% if not insight_generated_this_month %}
+    <div class="insight-card">
+      <p>Verifique las transacciones de este mes para generar una recomendación.</p>
     </div>
-    <p>
-      Gastaste <strong>$96.000</strong> en Delivery este mes, superando en un 40% el promedio de usuarios similares en tu región. 
-      Considera agrupar pedidos o cocinar más en casa. El 68% de tus gastos en comida fueron a Uber.
-    </p>
-    <p><strong>📌 Nota sobre Abril:</strong> Bajaste tu gasto en café un 12% respecto al mes pasado. ¡Buen comienzo!</p>
-    <div class="buttons">
-      <button>🔁 Generar Nueva Recomendación</button>
-      <button>💾 Guardar</button>
-    </div>
-  </div>
-
-  <div class="insight-card">
-    <h2>📅 Abril 2025</h2>
-    <div class="tags">
-      <span class="tag">⚠️ Gasto Frecuente en Café</span>
-      <span class="tag">💸 Compras impulsivas</span>
-      <span class="tag">🎯 Potencial de Ahorro: $16.500</span>
-    </div>
-    <p>
-      Realizaste 24 compras de café durante abril, por un total de <strong>$38.000</strong>, casi el doble del promedio en tu segmento de edad. 
-      La mayoría ocurrieron entre lunes y miércoles a media mañana. Considera preparar café en casa 2 o 3 veces por semana para equilibrar.
-    </p>
-    <div class="buttons">
-      <button>🔁 Generar Nueva Recomendación</button>
-      <button>💾 Guardar</button>
-    </div>
-  </div>
-
+  {% endif %}
+  
+  {% if all_insights %}
+    {% for item in all_insights %}
+      <div class="insight-card">
+        {% if loop.index0 == 0 %}
+          <div class="tag">🆕 Recomendación más reciente</div>
+        {% endif %}
+        <h2>📅 {{ spanish_months[item.month - 1] }} {{ item.year }}</h2>
+        <p style="white-space: pre-line;">{{ item.content }}</p>
+      </div>
+    {% endfor %}
+  {% endif %}
+  
   <script>
     const toggle = document.getElementById('theme-toggle');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
