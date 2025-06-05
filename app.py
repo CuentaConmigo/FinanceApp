@@ -309,7 +309,7 @@ def show_transactions():
         "Alojamiento": ["Hoteles", "Arriendo"],
         "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
         "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes"],
-        "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery", "Otros"],
+        "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery","Snacks", "Otros"],
         "Hogar": ["Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mascotas", "Mantenimiento del Hogar"],
         "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
         "Educación": ["Colegiatura", "Libros", "Cursos"],
@@ -1097,8 +1097,8 @@ def insights():
     last_month = first_day_this_month - timedelta(days=1)
     #target_month = last_month.month
     #target_year = last_month.year
-    target_month = 12
-    target_year = 2024
+    target_month = 1
+    target_year = 2025
     spanish_months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"

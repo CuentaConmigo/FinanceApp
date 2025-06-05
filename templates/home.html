@@ -249,6 +249,12 @@
     flex-direction: column;
     }
 
+    .bento-card.loading {
+      pointer-events: none;
+      opacity: 0.6;
+      transition: opacity 0.3s ease;
+    }
+
     .bento-header {
     display: flex;
     flex-direction: column;
@@ -493,7 +499,8 @@
       <picture class="bento-image-container">
         <img class="bento-image" src="{{ url_for('static', filename='images/Insights_image.png') }}" alt="Imagen de insights">
       </picture>
-      <a class="bento-card-link" href="/insights" aria-label="Ver AI Insights"></a>
+      <a class="bento-card-link" href="/insights" aria-label="Ver AI Insights"
+          onclick="handleInsightClick(event, this)"></a>
     </article>
 
   </div>
@@ -545,5 +552,36 @@
       toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
     });
   </script>
+
+  <script>
+    const insightCard = document.querySelector('.bento-card.purple-theme');
+    const link = insightCard.querySelector('.bento-card-link');
+
+    link.addEventListener('click', function (e) {
+      // Prevent default link behavior temporarily
+      e.preventDefault();
+
+      // Disable further clicks
+      link.style.pointerEvents = 'none';
+
+      // Replace card content with loading message or spinner
+      insightCard.innerHTML = `
+        <div class="bento-header-wrapper">
+          <header class="bento-header">
+            <h2 class="bento-title">Generando recomendación...</h2>
+          </header>
+        </div>
+        <div style="margin-top: 20px; font-size: 1.1rem; color: #191918; font-weight: 500;">
+          🔄 Por favor espera...
+        </div>
+      `;
+
+      // Proceed to insights after a small delay (to ensure content visually updates)
+      setTimeout(() => {
+        window.location.href = '/insights';
+      }, 300);  // Can be 0 if you prefer instant redirect
+    });
+  </script>
+
 </body>
 </html>
