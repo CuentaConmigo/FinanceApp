@@ -113,6 +113,10 @@ def sync_user_transactions(user_email, full_sync=False):
             sender_match = re.search(r'@([a-zA-Z0-9.-]+)', headers.get('From', ''))
             sender_domain = sender_match.group(1) if sender_match else ''
             tx = extract_transaction_details(snippet, sender_domain)
+            if not tx:
+                print(f"Skipping message: {snippet}")
+                continue
+            
             try:
                 tx['Date'] = datetime.strptime(tx['Date'], "%d/%m/%Y %H:%M")
             except ValueError:
