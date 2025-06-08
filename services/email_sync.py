@@ -93,9 +93,7 @@ def sync_user_transactions(user_email, full_sync=False):
                 userId='me',
                 q=query,
                 pageToken=next_page_token,
-                maxResults=100,  # 500 is the Gmail API max per page
-                includeSpamTrash=False,
-                orderBy='recent'
+                maxResults=100  # 500 is the Gmail API max per page
         
             ).execute()
 
