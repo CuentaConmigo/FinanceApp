@@ -32,7 +32,7 @@ def create_oauth_flow():
 
 
 
-def get_credentials():
+def get_credentials(user_email):
     email = flask_session.get("email")
     if not email:
         raise Exception("No user email in session. Cannot retrieve credentials.")
