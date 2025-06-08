@@ -191,7 +191,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const regionsData = {{ regions_data|tojson }};
+            const regionsData = JSON.parse('{{ regions_data | tojson | safe }}');
             const regionSelect = document.getElementById('region');
             const provinciaSelect = document.getElementById('provincia');
             const comunaSelect = document.getElementById('comuna');

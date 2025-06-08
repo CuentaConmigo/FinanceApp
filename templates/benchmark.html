@@ -139,11 +139,11 @@
     </div>
 
     <script>
-        const userSpending = {{ user_spending | tojson }};
-        const groupAverages = {{ group_averages | tojson }};
-        const allUsersAverages = {{ all_users_averages | tojson }};
-        const categories = {{ categories | tojson }};
-        
+        const userSpending = JSON.parse('{{ user_spending | tojson | safe }}');
+        const groupAverages = JSON.parse('{{ group_averages | tojson | safe }}');
+        const allUsersAverages = JSON.parse('{{ all_users_averages | tojson | safe }}');
+        const categories = JSON.parse('{{ categories | tojson | safe }}');
+                
         function getColors(deviations) {
             return categories.map((cat, i) => {
                 if (cat === 'No Verificado') {

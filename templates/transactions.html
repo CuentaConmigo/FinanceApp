@@ -278,7 +278,7 @@
 
     <script>
         // Define categories and their respective subcategories
-        const categoryMap = {{ category_map | tojson }};
+        const categoryMap = JSON.parse('{{ category_map | tojson | safe }}');
 
         // Function to dynamically update subcategories based on the selected category
         document.querySelectorAll('.category-dropdown').forEach(categoryDropdown => {

@@ -234,11 +234,11 @@
     </div>
 
     <script>
-        const sunburstData = {{ sunburstData | tojson }};
-        const barData = {{ barData | tojson }};
-        const totalSpending = {{ totalSpending | int | tojson }};
+        const sunburstData = JSON.parse('{{ sunburst_data | tojson | safe }}');
+        const barData = JSON.parse('{{ bar_data | tojson | safe }}');
+        const totalSpending = JSON.parse('{{ total_spending | tojson | safe }}');
 
-        
+                
         const width = 840; // Increased width (600px * 1.4)
         const radius = width / 2;
 
@@ -467,6 +467,9 @@
                             display: true,
                             text: 'Gasto Total',
                             color: '#666',
+                                padding: {
+                                bottom: 15  // ← adds space between label and ticks
+                            },
                             font: {
                                 family: 'Inter',
                                 size: 14,

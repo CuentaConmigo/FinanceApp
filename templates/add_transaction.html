@@ -159,7 +159,7 @@
   </div>
 
   <script>
-    const categoryMap = {{ categories | tojson }};
+    const categoryMap = JSON.parse('{{ categories | tojson | safe }}');
     function updateSubcategories() {
       const category = document.getElementById("category").value;
       const sub = document.getElementById("sub_category");
