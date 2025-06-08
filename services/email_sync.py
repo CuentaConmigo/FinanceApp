@@ -62,10 +62,11 @@ def sync_user_transactions(user_email, full_sync=False):
     synced_count = 0
     if not user_email:
         user_email = flask_session.get("email")
-        
+
     print(f"Starting Gmail sync for: {user_email}")
     try:
-        creds = get_credentials()
+        creds = get_credentials(user_email)
+        print(f"Starting Gmail sync for: {user_email}")
         service = build('gmail', 'v1', credentials=creds)
         user = session.query(UserCharacteristic).filter_by(email=user_email).first()
         if not user:
