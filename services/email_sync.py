@@ -170,7 +170,6 @@ def sync_user_transactions(user_email, full_sync=False):
         sync_progress.pop(user_email, None)
         # Update last_synced
         if user:
-            from datetime import datetime
             user.last_synced = datetime.utcnow()
             session.commit()
         return synced_count
