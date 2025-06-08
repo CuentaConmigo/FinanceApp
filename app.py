@@ -50,9 +50,6 @@ app.jinja_env.filters['dot_thousands'] = dot_thousands
 
 
 
-# Authentication Route
-from auth_helpers import create_oauth_flow, fernet  # 🆕 make sure this is imported
-
 @app.route('/login')
 def login():
     flask_session.clear()
