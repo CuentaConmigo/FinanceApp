@@ -7,7 +7,7 @@ from datetime import datetime
 Base = declarative_base()
 
 # Setup database connection
-DATABASE_URI = 'postgresql+psycopg2://postgres:4655Mvem0v3Quick@localhost/finance_app'
+DATABASE_URI = os.environ.get("DATABASE_URI")
 engine = create_engine(DATABASE_URI)
 Session = sessionmaker(bind=engine)
 session = Session()

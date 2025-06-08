@@ -50,9 +50,9 @@ def extract_transaction_details_bci(email_body):
 
 
 def extract_transaction_details(body, sender_domain):
-    if 'bancochile' in sender_domain or 'bancoedwards' in sender_domain:
+    if 'bancochile' in sender_domain or 'bancoedwards' in sender_domain or 'hotmail.com' in sender_domain:
         return extract_transaction_details_banco_de_chile(body)
-    elif 'bci' in sender_domain or 'contacto' in sender_domain:
+    elif 'bci' in sender_domain or 'contacto' in sender_domain or 'gmail.com' in sender_domain:
         return extract_transaction_details_bci(body)
     return None
 
@@ -72,7 +72,7 @@ def sync_user_transactions(user_email, full_sync=False):
             return
 
         #query = 'from:(simon_gaucho@hotmail.com OR simongrasss@gmail.com)'  # 🔁 Update to match all banks/emails you want
-        query = 'from:(enviodigital@bancochile.cl OR enviodigital@bancoedwards.cl OR contacto@bci.cl)'  # 🔁 Update to match all banks/emails you want
+        query = 'from:(enviodigital@bancochile.cl OR enviodigital@bancoedwards.cl OR contacto@bci.cl OR simon_gaucho@hotmail.com OR simongrasss@gmail.com)'  # 🔁 Update to match all banks/emails you want
         if not full_sync and user.last_synced:
             after_date = user.last_synced.strftime('%Y/%m/%d')  # Gmail expects YYYY/MM/DD format
             query += f' after:{after_date}'
