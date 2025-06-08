@@ -99,7 +99,7 @@ class Insight(Base):
 class Feedback(Base):
     __tablename__ = 'feedback'
     id = Column(Integer, primary_key=True)
-    user_id = Column(String, ForeignKey('user_characteristics.user_id'))
+    user_id = Column(Integer, ForeignKey('user_characteristics.user_id'))
     comment = Column(Text, nullable=False)
     date = Column(DateTime, default=datetime.utcnow)
 
