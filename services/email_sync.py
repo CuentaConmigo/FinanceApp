@@ -8,6 +8,8 @@ from services.auth_helpers import get_credentials
 from rapidfuzz import process
 import pandas as pd
 from flask import session as flask_session
+from datetime import datetime
+
 
 # Dictionary to hold sync progress per user
 sync_progress = {}
