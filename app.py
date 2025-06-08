@@ -123,7 +123,11 @@ def start_sync():
     user.onboarded = True
     session.commit()
 
-    sync_user_transactions(email, full_sync=True)
+    try:
+        sync_user_transactions(email, full_sync=True)
+    except Exception as e:
+        print(f"❌ Error during Gmail sync for {email}: {e}")
+        return "Error during sync. Please try again later.", 500
 
     return redirect(url_for('questionnaire'))
 

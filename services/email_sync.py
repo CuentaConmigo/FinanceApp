@@ -60,8 +60,9 @@ def extract_transaction_details(body, sender_domain):
 
 def sync_user_transactions(user_email, full_sync=False):
     synced_count = 0
-    user_email = flask_session.get("email")  # We’ll use this to track per-user progress
-
+    if not user_email:
+        user_email = flask_session.get("email")
+        
     print(f"Starting Gmail sync for: {user_email}")
     try:
         creds = get_credentials()
