@@ -11,7 +11,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy.types import Integer  # Add this line
 from calendar import monthrange
 from services.email_sync import sync_user_transactions
-from services.auth_helpers import get_credentials
+from services.auth_helpers import create_oauth_flow, fernet,get_credentials
 from collections import defaultdict, Counter
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -51,40 +51,49 @@ app.jinja_env.filters['dot_thousands'] = dot_thousands
 
 
 # Authentication Route
+from auth_helpers import create_oauth_flow, fernet  # 🆕 make sure this is imported
+
 @app.route('/login')
 def login():
-    # Clear any existing session data
     flask_session.clear()
 
-    # Start the OAuth flow
-    flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-    try:
-        creds = flow.run_local_server(port=5200)
-    except Exception:
-        creds = flow.run_local_server(port=5210)
+    flow = create_oauth_flow()
+    auth_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'
+    )
+    flask_session['state'] = state
+    return redirect(auth_url)
 
-    # Get Gmail user profile
-    service = build('gmail', 'v1', credentials=creds)
-    profile = service.users().getProfile(userId='me').execute()
-    email = profile['emailAddress']
-    flask_session['email'] = email
+@app.route('/oauth2callback')
+def oauth2callback():
+    state = flask_session.get('state')
+    flow = create_oauth_flow()
+    flow.fetch_token(authorization_response=request.url)
 
-    # Store token in DB
+    creds = flow.credentials
+    service = build("gmail", "v1", credentials=creds)
+    profile = service.users().getProfile(userId="me").execute()
+    email = profile["emailAddress"]
+    flask_session["email"] = email
+
+    # Save tokens to DB
     token_record = session.query(OAuthToken).filter_by(email=email).first()
     if not token_record:
         token_record = OAuthToken(email=email)
 
-    token_record.token = creds.token
-    token_record.refresh_token = creds.refresh_token
+    token_record.token = fernet.encrypt(creds.token.encode()).decode()
+    token_record.refresh_token = fernet.encrypt(creds.refresh_token.encode()).decode() if creds.refresh_token else None
     token_record.token_uri = creds.token_uri
     token_record.client_id = creds.client_id
     token_record.client_secret = creds.client_secret
-    token_record.scopes = ','.join(creds.scopes)
+    token_record.scopes = ",".join(creds.scopes)
 
     session.merge(token_record)
     session.commit()
 
-    # Check if user exists
+    # User logic
     user = session.query(UserCharacteristic).filter_by(email=email).first()
     if not user:
         user = UserCharacteristic(email=email, onboarded=False)
@@ -95,13 +104,11 @@ def login():
     elif not user.onboarded:
         return render_template("onboarding.html")
 
-
-    # Existing user → check if missing fields
     if not (user.dob and user.income and user.region and user.name):
-        return redirect(url_for('questionnaire'))
+        return redirect(url_for("questionnaire"))
 
-    # ✅ Existing + complete profile → go sync transactions
-    return render_template("syncing.html")
+    return render_template("syncing.html", request=request)
+
 
 
 @app.route('/start_sync', methods=['POST'])

@@ -1,6 +1,6 @@
-from flask import session as flask_session
+from flask import session as flask_session, url_for
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from database_setup import session, OAuthToken
@@ -14,6 +14,23 @@ fernet = Fernet(os.getenv("ENCRYPTION_KEY"))
 
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
+def create_oauth_flow():
+    return Flow.from_client_config(
+        {
+            "web": {
+                "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [url_for('oauth2callback', _external=True)]
+            }
+        },
+        scopes=SCOPES,
+        redirect_uri=url_for('oauth2callback', _external=True)
+    )
+
+
 
 def get_credentials():
     email = flask_session.get("email")
@@ -49,30 +66,7 @@ def get_credentials():
                 raise RefreshError("Missing or invalid credentials — re-auth required.")
         except Exception as e:
             print("🔁 Re-authenticating due to credential error:", str(e))
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            try:
-                creds = flow.run_local_server(port=5200)
-            except OSError:
-                creds = flow.run_local_server(port=5210)
+            raise RefreshError("Missing or invalid credentials — re-auth required.")
 
-            email_service = build('gmail', 'v1', credentials=creds)
-            profile = email_service.users().getProfile(userId='me').execute()
-            email = profile['emailAddress']
-            flask_session['email'] = email
-
-            # Refresh DB token after login
-            token_record = session.query(OAuthToken).filter_by(email=email).first()
-            if not token_record:
-                token_record = OAuthToken(email=email)
-
-            token_record.token = fernet.encrypt(creds.token.encode()).decode()
-            token_record.refresh_token = fernet.encrypt(creds.refresh_token.encode()).decode() if creds.refresh_token else None
-            token_record.token_uri = creds.token_uri
-            token_record.client_id = creds.client_id
-            token_record.client_secret = creds.client_secret
-            token_record.scopes = ','.join(creds.scopes)
-
-            session.merge(token_record)
-            session.commit()
 
     return creds
