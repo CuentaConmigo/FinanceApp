@@ -8,7 +8,7 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
             :root {
                 --bg: #fdfdfc;
@@ -28,7 +28,7 @@
                 --shadow: rgba(0, 0, 0, 0.3);
             }
             body {
-                font-family: 'Roboto', sans-serif;
+                font-family: 'Inter', sans-serif;
                 background: var(--bg);
                 color: var(--text);
                 text-align: center;
@@ -37,7 +37,7 @@
             }
 
             h1, h2 {
-                font-family: 'Roboto', sans-serif;
+                font-family: 'Inter', sans-serif;
                 font-weight: 700;
                 color: var(--text);
             }
@@ -89,7 +89,7 @@
                 pointer-events: none;
                 display: none;
                 font-size: 14px;
-                font-family: 'Roboto', sans-serif; /* Ensure consistent font */
+                font-family: 'Inter', sans-serif; /* Ensure consistent font */
             }
 
             .button-container {
@@ -378,7 +378,7 @@
             .style("font-size", d => (d.depth === 1 ? "14px" : "12px")) // Larger for categories
             .style("font-weight", "500") // Medium weight for better readability
             .style("fill", "#333") // Darker text for better contrast
-            .style("font-family", "'Roboto', sans-serif") // Apply Google Font
+            .style("font-family", "'Inter', sans-serif") // Apply Google Font
             .style("display", d => d.depth > 0 ? "block" : "none");
 
 
@@ -415,12 +415,12 @@
                         xPadding: 10,
                         yPadding: 10,
                         titleFont: {
-                            family: 'Roboto',
+                            family: 'Inter',
                             size: 16,
                             weight: '500',
                         },
                         bodyFont: {
-                            family: 'Roboto',
+                            family: 'Inter',
                             size: 14,
                             weight: '400',
                         },
@@ -444,7 +444,7 @@
                             text: 'Mes',
                             color: '#666',
                             font: {
-                                family: 'Roboto',
+                                family: 'Inter',
                                 size: 16,
                                 weight: '700',
                             }
@@ -453,7 +453,7 @@
                         ticks: {
                             color: '#666', 
                             font: {
-                                family: 'Roboto',
+                                family: 'Inter',
                                 size: 14, // Increase font size
                                 weight: '500', // Medium weight
                             }
@@ -468,7 +468,7 @@
                             text: 'Gasto Total',
                             color: '#666',
                             font: {
-                                family: 'Roboto',
+                                family: 'Inter',
                                 size: 14,
                                 weight: '700',
                             }
@@ -476,7 +476,7 @@
                         ticks: {
                             color: '#666',
                             font: {
-                                family: 'Roboto',
+                                family: 'Inter',
                                 size: 14,
                                 weight: '500',
                             },
@@ -649,7 +649,7 @@
                 .style("font-size", d => (d.depth === 1 ? "14px" : "12px"))
                 .style("font-weight", "500")
                 .style("fill", "#333")
-                .style("font-family", "'Roboto', sans-serif")
+                .style("font-family", "'Inter', sans-serif")
                 .style("display", d => d.depth > 0 ? (d.depth === 1 ? "block" : "none") : "none");
 
 

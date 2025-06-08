@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Agregar Gasto Manual</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #fdfdfc;
@@ -23,7 +23,7 @@
       --shadow: rgba(0, 0, 0, 0.3);
     }
     body {
-      font-family: 'Roboto', sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 60px 20px;
@@ -95,6 +95,18 @@
       background-color: var(--accent);
       color: #fff;
     }
+
+    input[type="date"],
+    input[type="number"],
+    input[type="text"],
+    select {
+      box-sizing: border-box;
+      min-width: 0;
+      width: 100%;
+      background: #f9f9f9;
+    }
+
+
   </style>
 </head>
 <div style="position: fixed; top: 20px; right: 20px; z-index: 100;">
