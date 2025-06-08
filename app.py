@@ -626,6 +626,8 @@ def spending_visualization():
     if "No Verificado" in raw_categories:
         categories.append("No Verificado")
 
+    if not sunburst_data:
+        sunburst_data = []
 
 
     return render_template(

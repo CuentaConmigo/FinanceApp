@@ -108,7 +108,12 @@ def sync_user_transactions(user_email, full_sync=False):
 
 
         for message in messages:
-            msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
+            try:
+                msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
+            except Exception as e:
+                print(f"Failed to fetch message {message['id']}: {e}")
+                continue
+
             snippet = msg['snippet']
             headers = {h['name']: h['value'] for h in msg['payload']['headers']}
             sender_match = re.search(r'@([a-zA-Z0-9.-]+)', headers.get('From', ''))
