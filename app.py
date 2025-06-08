@@ -633,7 +633,7 @@ def spending_visualization():
     return render_template(
         'visualization.html',
         user=user,
-        sunburstData=sunburst_data,
+        sunburst_data=sunburst_data,
         barData=bar_data,
         totalSpending=total_spending,
         distinct_months=distinct_months,
