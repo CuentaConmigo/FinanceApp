@@ -5,6 +5,12 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from database_setup import session, OAuthToken
 from google.auth.exceptions import RefreshError
+import os
+from cryptography.fernet import Fernet
+from dotenv import load_dotenv
+
+load_dotenv()
+fernet = Fernet(os.getenv("ENCRYPTION_KEY"))
 
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
@@ -25,8 +31,8 @@ def get_credentials():
         token_record.client_secret
     ]):
         creds = Credentials(
-            token=token_record.token,
-            refresh_token=token_record.refresh_token,
+            token=fernet.decrypt(token_record.token.encode()).decode(),
+            refresh_token=fernet.decrypt(token_record.refresh_token.encode()).decode() if token_record.refresh_token else None,
             token_uri=token_record.token_uri,
             client_id=token_record.client_id,
             client_secret=token_record.client_secret,
@@ -59,8 +65,8 @@ def get_credentials():
             if not token_record:
                 token_record = OAuthToken(email=email)
 
-            token_record.token = creds.token
-            token_record.refresh_token = creds.refresh_token
+            token_record.token = fernet.encrypt(creds.token.encode()).decode()
+            token_record.refresh_token = fernet.encrypt(creds.refresh_token.encode()).decode() if creds.refresh_token else None
             token_record.token_uri = creds.token_uri
             token_record.client_id = creds.client_id
             token_record.client_secret = creds.client_secret

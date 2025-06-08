@@ -1,50 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Syncing Gmail</title>
+  <meta charset="UTF-8" />
+  <title>Sincronizando Gmail</title>
   <meta http-equiv="refresh" content="1;url=/sync?full={{ request.args.get('full', 'false') }}" />
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 60px; }
-    h1 { font-size: 2em; margin-bottom: 10px; }
-    p { font-size: 1.2em; color: #555; }
+    :root {
+      --bg: #fdfbf7;
+      --text: #1a1a1a;
+      --accent: #42b4d5;
+      --muted: #777;
+    }
+
+    [data-theme='dark'] {
+      --bg: #1e1e1e;
+      --text: #f0f0f0;
+      --accent: #42b4d5;
+      --muted: #aaa;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      text-align: center;
+      padding: 60px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 1.2em;
+      color: var(--muted);
+    }
+
     .loader {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid #3498db;
+      border: 6px solid #ddd;
+      border-top: 6px solid var(--accent);
       border-radius: 50%;
       width: 50px;
       height: 50px;
       animation: spin 1s linear infinite;
       margin: 30px auto;
     }
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    #status {
+      font-size: 1.1em;
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
-    <h1>📩 Sincronizando con Gmail </h1>
-    <div class="loader"></div>
-    <p id="status">Sincronizando transacciones...</p>
-    <p style="margin-top: 20px;">
-        ⚠️ Por favor, no cierres esta pestaña hasta que termine la sincronización.
-    </p>
-    <p style="margin-top: 10px; color: #888;">
-        La primera sincronización puede demorar hasta <strong>10 minutos</strong>, especialmente si tienes muchas transacciones antiguas.
-    </p>
-    <script>
-      async function pollSyncStatus() {
-        const res = await fetch("/sync_status");
-        const data = await res.json();
-        document.getElementById("status").innerText = `🔄 ${data.count} nuevas transacciones encontradas...`;
-  
-        // Keep polling until the sync result page takes over
-        setTimeout(pollSyncStatus, 1000);
-      }
-  
-      pollSyncStatus();
-    </script>
-  </body>
-  
+  <h1>📩 Sincronizando con Gmail</h1>
+  <div class="loader"></div>
+  <p id="status">Sincronizando transacciones...</p>
+  <p style="margin-top: 20px;">
+    ⚠️ Por favor, no cierres esta pestaña hasta que termine la sincronización.
+  </p>
+  <p style="margin-top: 10px; color: var(--muted);">
+    La primera sincronización puede demorar hasta <strong>10 minutos</strong>, especialmente si tienes muchas transacciones antiguas.
+  </p>
+
+  <script>
+    // Apply saved theme
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    // Sync status poller
+    async function pollSyncStatus() {
+      const res = await fetch("/sync_status");
+      const data = await res.json();
+      document.getElementById("status").innerText = `🔄 ${data.count} nuevas transacciones encontradas...`;
+      setTimeout(pollSyncStatus, 1000);
+    }
+
+    pollSyncStatus();
+  </script>
+</body>
 </html>

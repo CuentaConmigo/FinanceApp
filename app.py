@@ -1,12 +1,12 @@
 import os
 import json
-from flask import Flask, render_template, request, redirect, url_for, session as flask_session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session as flask_session, jsonify,flash
 from sqlalchemy import func, extract, between
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic, Budget, OAuthToken, Insight
+from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic, Budget, OAuthToken, Insight, Feedback
 from datetime import datetime, date, timedelta
 from sqlalchemy.types import Integer  # Add this line
 from calendar import monthrange
@@ -15,14 +15,18 @@ from services.auth_helpers import get_credentials
 from collections import defaultdict, Counter
 from openai import OpenAI
 from dotenv import load_dotenv
+import re
+from cryptography.fernet import Fernet
 load_dotenv()
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+fernet = Fernet(ENCRYPTION_KEY)
 
 
 
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Replace with a secure random key
+app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 
 
 def dot_thousands(value):
@@ -54,7 +58,10 @@ def login():
 
     # Start the OAuth flow
     flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-    creds = flow.run_local_server(port=5200)
+    try:
+        creds = flow.run_local_server(port=5200)
+    except Exception:
+        creds = flow.run_local_server(port=5210)
 
     # Get Gmail user profile
     service = build('gmail', 'v1', credentials=creds)
@@ -80,11 +87,14 @@ def login():
     # Check if user exists
     user = session.query(UserCharacteristic).filter_by(email=email).first()
     if not user:
-        # New user → create row, redirect to questionnaire
-        user = UserCharacteristic(email=email)
+        user = UserCharacteristic(email=email, onboarded=False)
         session.add(user)
         session.commit()
-        return redirect(url_for('questionnaire'))
+        return render_template("onboarding.html")
+
+    elif not user.onboarded:
+        return render_template("onboarding.html")
+
 
     # Existing user → check if missing fields
     if not (user.dob and user.income and user.region and user.name):
@@ -92,6 +102,27 @@ def login():
 
     # ✅ Existing + complete profile → go sync transactions
     return render_template("syncing.html")
+
+
+@app.route('/start_sync', methods=['POST'])
+def start_sync():
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+
+    email = flask_session['email']
+
+    user = session.query(UserCharacteristic).filter_by(email=email).first()
+    if not user:
+        user = UserCharacteristic(email=email)
+        session.add(user)
+
+    user.onboarded = True
+    session.commit()
+
+    sync_user_transactions(email, full_sync=True)
+
+    return redirect(url_for('questionnaire'))
+
 
 
 
@@ -110,6 +141,10 @@ def home():
     # Get the user's email
     user_email = flask_session['email']
     user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+
+    if not user or not user.onboarded:
+     return render_template("onboarding.html")
+
 
     # Check if user exists and has completed the questionnaire
     if not user or not (user.dob and user.income and user.region and user.name):  # Add more fields as needed
@@ -343,6 +378,96 @@ def show_transactions():
 
     )
 
+
+@app.route('/add_transaction', methods=['GET', 'POST'])
+def add_transaction():
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        return redirect(url_for('questionnaire'))
+
+    categories = {
+        "Transporte": ["Bencina", "Transporte público", "Mantenimiento", "Peajes/Tag","Estacionamiento"],
+        "Entretenimiento": ["Películas", "Subscripciones (Netflix)", "Conciertos", "Deportes"],
+        "Alojamiento": ["Hoteles", "Arriendo"],
+        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
+        "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes"],
+        "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery","Snacks", "Otros"],
+        "Hogar": ["Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mascotas", "Mantenimiento del Hogar"],
+        "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
+        "Educación": ["Colegiatura", "Libros", "Cursos"],
+        "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones"],
+        "Otro": ["Viajes", "Regalos", "Otros"]
+    }
+
+    if request.method == 'POST':
+        date_str = request.form.get('date', '').strip()
+        amount_str = request.form.get('amount', '').strip()
+        category = request.form.get('category', '').strip()
+        sub_category = request.form.get('sub_category', '').strip()
+        merchant_name = request.form.get('merchant_name', '').strip() or "Manual"
+
+        # 🔐 Validate fields
+        if not date_str or not re.match(r'\d{4}-\d{2}-\d{2}', date_str):
+            flash("Fecha inválida.")
+            return redirect(url_for('add_transaction'))
+
+        if not re.match(r'^\d+(\.\d{1,2})?$', amount_str):
+            flash("Monto inválido. Usa solo números.")
+            return redirect(url_for('add_transaction'))
+
+        if not category or category not in categories:
+            flash("Categoría inválida.")
+            return redirect(url_for('add_transaction'))
+
+        if not sub_category or sub_category not in categories.get(category, []):
+            flash("Subcategoría inválida.")
+            return redirect(url_for('add_transaction'))
+
+        if len(merchant_name) > 50:
+            flash("Nombre del comercio muy largo (máx 50 caracteres).")
+            return redirect(url_for('add_transaction'))
+
+        # 🔄 Parse safely
+        try:
+            amount = float(amount_str)
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        except Exception as e:
+            flash("Error al procesar la fecha o el monto.")
+            return redirect(url_for('add_transaction'))
+
+        # 🔍 Use or create merchant
+        merchant = session.query(Merchant).filter_by(merchant_name=merchant_name).first()
+        if not merchant:
+            merchant = Merchant(merchant_name=merchant_name, category=category, sub_category=sub_category)
+            session.add(merchant)
+            session.flush()
+
+        # 💾 Store transaction
+        new_tx = Transaction(
+            user_id=user.user_id,
+            merchant_id=merchant.merchant_id,
+            amount=amount,
+            date=date_obj,
+            category=category,
+            sub_category=sub_category,
+            merchant_fixed=merchant_name
+        )
+        session.add(new_tx)
+        session.commit()
+
+        flash("Transacción agregada con éxito.")
+        return redirect(url_for('show_transactions'))
+
+    return render_template('add_transaction.html', categories=categories)
+
+
+
+
+
 @app.route('/visualization', methods=['GET'])
 def spending_visualization():
     if 'email' not in flask_session:
@@ -517,26 +642,55 @@ def spending_visualization():
 def questionnaire():
     if request.method == 'POST':
         # Get form data
-        dob = request.form.get('dob')
-        income = request.form.get('income')
-        region = request.form.get('region')
-        provincia = request.form.get('provincia')
-        comuna = request.form.get('comuna')
-        degree = request.form.get('degree')
-        yoe = request.form.get('yoe')
+        dob = request.form.get('dob', '').strip()
+        income = request.form.get('income', '').strip()
+        region = request.form.get('region', '').strip()
+        provincia = request.form.get('provincia', '').strip()
+        comuna = request.form.get('comuna', '').strip()
+        degree = request.form.get('degree', '').strip()
+        yoe = request.form.get('yoe', '').strip()
+        name = request.form.get('name', '').strip()
 
-        name = request.form.get('name')
+        # Validate fields
+
+        if not dob or not re.match(r'\d{4}-\d{2}-\d{2}', dob):
+            flash("Fecha de nacimiento inválida.")
+            return redirect(url_for('questionnaire'))
+
+        try:
+            income_val = int(income)
+            if income_val <= 0:
+                flash("Los ingresos deben ser un número positivo.")
+                return redirect(url_for('questionnaire'))
+        except ValueError:
+            flash("Ingresos deben ser numéricos.")
+            return redirect(url_for('questionnaire'))
+
+        if len(name) > 50:
+            flash("El nombre es demasiado largo.")
+            return redirect(url_for('questionnaire'))
+
+        if not region or not provincia or not comuna:
+            flash("Por favor completa región, provincia y comuna.")
+            return redirect(url_for('questionnaire'))
+
+        try:
+            yoe_val = int(yoe)
+            if yoe_val < 0 or yoe_val > 80:
+                flash("Años de experiencia inválido.")
+                return redirect(url_for('questionnaire'))
+        except ValueError:
+            flash("Años de experiencia debe ser un número.")
+            return redirect(url_for('questionnaire'))
 
 
-        # Fetch the logged-in user's email
+        # Fetch user
         user_email = flask_session['email']
-
-        # Try to find user, else create new
         user = session.query(UserCharacteristic).filter_by(email=user_email).first()
         if not user:
             user = UserCharacteristic(email=user_email)
 
-        # Update all user fields
+        # Save data
         user.dob = dob
         user.income = income
         user.sector = comuna
@@ -550,13 +704,13 @@ def questionnaire():
         session.commit()
 
         return render_template("syncing.html")
-        
 
-    # Load JSON data with regions, cities, and comunas
+    # Load dropdown data
     with open('regions_data.json', 'r', encoding='utf-8') as f:
         regions_data = json.load(f)
 
     return render_template('questionnaire.html', regions_data=regions_data)
+
 
 
 @app.route('/benchmark')
@@ -1390,6 +1544,25 @@ def insights():
         spanish_months=spanish_months
 
     )
+
+@app.route('/feedback', methods=['GET', 'POST'])
+def feedback():
+    user_email = flask_session.get("email")
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+
+    if not user:
+        return redirect(url_for('questionnaire'))
+
+    if request.method == 'POST':
+        comment = request.form.get('comment')
+        if comment:
+            new_feedback = Feedback(user_id=user.user_id, comment=comment)
+            session.add(new_feedback)
+            session.commit()
+            return render_template('feedback.html', user=user, submitted=True)
+
+    return render_template('feedback.html', user=user, submitted=False)
+
 
 
 if __name__ == '__main__':

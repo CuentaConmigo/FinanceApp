@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime,ForeignKey, func, Text
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime,ForeignKey, func, Text,Boolean
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker,relationship
 from datetime import datetime
@@ -57,6 +57,7 @@ class UserCharacteristic(Base):
     yoe = Column(Integer)
     name = Column(String)  # matches the "name" column in your PostgreSQL table
     last_synced = Column(DateTime, default=None)
+    onboarded = Column(Boolean, default=False)
 
 
 
@@ -93,6 +94,13 @@ class Insight(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     tokens_used = Column(Integer)
 
+
+class Feedback(Base):
+    __tablename__ = 'feedback'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String, ForeignKey('user_characteristics.user_id'))
+    comment = Column(Text, nullable=False)
+    date = Column(DateTime, default=datetime.utcnow)
 
 
 # Create all tables in the database

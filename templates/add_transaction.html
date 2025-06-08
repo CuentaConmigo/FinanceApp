@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agregar Gasto Manual</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #fdfdfc;
+      --text: #222;
+      --card-bg: #ffffff;
+      --border: #eee;
+      --accent: #2f80ed;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme='dark'] {
+      --bg: #1e1e1e;
+      --text: #e0e0e0;
+      --card-bg: #2b2b2b;
+      --border: #444;
+      --accent: #5294e2;
+      --shadow: rgba(0, 0, 0, 0.3);
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 60px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    .flash .alert {
+      background: #ffe6e6;
+      color: #b00020;
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #ffcccc;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 20px var(--shadow);
+      padding: 30px;
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: 500;
+      margin-top: 15px;
+      display: block;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      background: #f9f9f9;
+    }
+    button {
+      margin-top: 30px;
+      font-weight: bold;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background-color: #2563eb;
+    }
+    .back-btn {
+      margin-top: 30px;
+      text-decoration: none;
+      font-size: 0.95rem;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    .back-btn:hover {
+      background-color: var(--accent);
+      color: #fff;
+    }
+  </style>
+</head>
+<div style="position: fixed; top: 20px; right: 20px; z-index: 100;">
+    <button id="theme-toggle"
+      style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 1.3rem;">
+      🌙
+    </button>
+  </div>
+  
+
+<body>
+
+
+
+  <div class="card">
+    <h1>Agregar Gasto Manual</h1>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">
+          {% for message in messages %}
+            <div class="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <form method="POST">
+      <label for="date">Fecha:</label>
+      <input type="date" name="date" required />
+
+      <label for="amount">Monto:</label>
+      <input type="number" name="amount" step="0.01" required />
+
+      <label for="merchant_name">Nombre del comercio:</label>
+      <input type="text" name="merchant_name" placeholder="Ej: Arriendo, Luz, etc." />
+
+      <label for="category">Categoría:</label>
+      <select name="category" id="category" required onchange="updateSubcategories()">
+        {% for cat in categories.keys() %}
+          <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="sub_category">Subcategoría:</label>
+      <select name="sub_category" id="sub_category" required></select>
+
+      <button type="submit">Agregar Transacción</button>
+    </form>
+
+    <a href="/transactions" class="back-btn">← Volver a Historial</a>
+  </div>
+
+  <script>
+    const categoryMap = {{ categories | tojson }};
+    function updateSubcategories() {
+      const category = document.getElementById("category").value;
+      const sub = document.getElementById("sub_category");
+      sub.innerHTML = "";
+      categoryMap[category].forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.innerText = s;
+        sub.appendChild(opt);
+      });
+    }
+    window.onload = updateSubcategories;
+
+    // Dark mode
+    const toggle = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+    toggle.addEventListener('click', () => {
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
+    });
+  </script>
+</body>
+</html>

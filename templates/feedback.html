@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enviar Feedback</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    :root {
+      --bg: #fdfbf7;
+      --text: #1a1a1a;
+      --accent: #42b4d5;
+      --muted: #777;
+      --card-bg: #fff;
+      --border: #ddd;
+      --shadow: rgba(0, 0, 0, 0.06);
+    }
+
+    [data-theme='dark'] {
+      --bg: #1e1e1e;
+      --text: #f0f0f0;
+      --card-bg: #2b2b2b;
+      --muted: #aaa;
+      --border: #444;
+      --shadow: rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 40px 20px;
+      transition: background 0.3s ease, color 0.3s ease;
+      min-height: 100vh;
+    }
+
+    #theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+
+    #char-counter {
+        text-align: right;
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: -14px;
+        margin-bottom: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    form textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      resize: vertical;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #2b7fab;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    [data-theme='dark'] button {
+      background: #42b4d5;
+    }
+
+    button:hover {
+      background: #246c95;
+    }
+
+    .confirmation {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .back-home {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 30px auto 0;
+    padding: 12px 24px;
+    background: #2b7fab; /* Stronger blue (like home icon) */
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 10px;
+    border: 2px solid #2b7fab;
+    transition: all 0.25s ease;
+    }
+
+    [data-theme='dark'] .back-home {
+    background: #42b4d5;
+    border-color: #42b4d5;
+    }
+
+    .back-home:hover {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    }
+
+
+  </style>
+</head>
+<body data-theme="light">
+  <button id="theme-toggle">🌙</button>
+
+  <header>
+    <h1>¿Cómo podemos mejorar?</h1>
+  </header>
+
+  <div class="container">
+    {% if submitted %}
+    <div class="confirmation">
+    ¡Gracias por enviarnos tu feedback!<br><br>
+    <a class="back-home" href="/">
+        <i class="fas fa-arrow-left"></i> Volver al inicio
+    </a>
+    </div>
+
+    {% else %}
+      <form action="/feedback" method="post">
+        <label for="comment">Escríbenos lo que piensas:</label>
+        <textarea id="comment" name="comment" required maxlength="500" oninput="updateCounter()"></textarea>
+        <div id="char-counter">0 / 500 caracteres</div>
+        <button type="submit">Enviar</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <script>
+    const toggle = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    toggle.textContent = currentTheme === 'dark' ? '🌞' : '🌙';
+
+    toggle.addEventListener('click', () => {
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      toggle.textContent = theme === 'dark' ? '🌞' : '🌙';
+    });
+  </script>
+
+  <script>
+    function updateCounter() {
+        const textarea = document.getElementById('comment');
+        const counter = document.getElementById('char-counter');
+        counter.textContent = `${textarea.value.length} / 500 caracteres`;
+    }
+
+    // Initialize if user presses back or reloads with data filled
+    window.onload = updateCounter;
+    </script>
+
+</body>
+</html>
