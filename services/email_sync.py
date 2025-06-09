@@ -10,6 +10,8 @@ import pandas as pd
 from flask import session as flask_session
 from datetime import datetime
 import psutil, os
+import time
+
 
 
 
@@ -113,7 +115,7 @@ def sync_user_transactions(user_email, full_sync=False):
             print("📦 Doing full sync of all emails")
 
         next_page_token = None
-        max_to_process = 500  # 🔒 Hard limit for testing
+        max_to_process = 200  # 🔒 Hard limit for testing
         processed_count = 0
 
         while True:
@@ -133,6 +135,8 @@ def sync_user_transactions(user_email, full_sync=False):
                     msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
                     processed_count += 1
                     print(f"🔄 Processed {processed_count} emails so far — Memory: {memory_usage():.2f} MB")
+                    time.sleep(0.2)
+
 
                 except HttpError as e:
                     print(f"⚠️ Failed to fetch message {message['id']}: {e}")
