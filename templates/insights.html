@@ -175,9 +175,14 @@
 
   {% if not insight_generated_this_month %}
     <div class="insight-card">
-      <p>Verifique las transacciones de este mes para generar una recomendación.</p>
+      {% if no_transactions_in_month %}
+        <p>No se detectaron transacciones para este mes. Asegúrate de sincronizar tu Gmail o agregar movimientos manuales.</p>
+      {% else %}
+        <p>Verifique las transacciones de este mes para generar una recomendación.</p>
+      {% endif %}
     </div>
   {% endif %}
+
   
   {% if all_insights %}
     {% for item in all_insights %}

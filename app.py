@@ -326,8 +326,8 @@ def show_transactions():
             transaction.sub_category = lean_merchant.sub_category
             transaction.lean_merchant_id = lean_merchant.id
             print(f"✅ Filled Transaction ID {transaction.transaction_id} from LeanMerchant")
-        else:
-            print(f"❌ No LeanMerchant match found for Transaction ID {transaction.transaction_id}")
+        #else:
+            #print(f"❌ No LeanMerchant match found for Transaction ID {transaction.transaction_id}")
 
     # Step 6: Commit all updates in one DB call
 
@@ -1325,6 +1325,7 @@ def insights():
             current_month_name=last_month.strftime('%B'),
             current_year=target_year,
             insight_generated_this_month=False,
+            no_transactions_in_month=True,
             spanish_months=spanish_months
         )
 
@@ -1349,6 +1350,7 @@ def insights():
             current_month_name=last_month.strftime('%B'),
             current_year=target_year,
             insight_generated_this_month=False,
+            no_transactions_in_month=False,
             spanish_months=spanish_months
 
         )
@@ -1570,6 +1572,7 @@ def insights():
         current_month_name=month_str,
         current_year=target_year,
         insight_generated_this_month=insight_generated_this_month,
+        no_transactions_in_month=False,
         spanish_months=spanish_months
 
     )
