@@ -121,7 +121,7 @@ def sync_user_transactions(user_email, full_sync=False):
                 userId='me',
                 q=query,
                 pageToken=next_page_token,
-                maxResults=50  # smaller batch = less memory
+                maxResults=10  # smaller batch = less memory
             ).execute()
 
             for message in response.get('messages', []):
@@ -132,6 +132,8 @@ def sync_user_transactions(user_email, full_sync=False):
                 try:
                     msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
                     processed_count += 1
+                    print(f"🔄 Processed {processed_count} emails so far — Memory: {memory_usage():.2f} MB")
+
                 except HttpError as e:
                     print(f"⚠️ Failed to fetch message {message['id']}: {e}")
                     continue
@@ -198,9 +200,13 @@ def sync_user_transactions(user_email, full_sync=False):
             next_page_token = response.get('nextPageToken')
             if not next_page_token or processed_count >= max_to_process:
                 break
+            print(f"📦 Exiting pagination loop. Total processed: {processed_count}")
+
 
         print(f"✅ Gmail sync complete. Synced {synced_count} transactions.")
         print(f"🧠 Final memory usage: {memory_usage():.2f} MB")
+        print(f"🧠 Peak memory: {memory_usage():.2f} MB after processing {processed_count} emails")
+
         sync_progress.pop(user_email, None)
 
         if user:
