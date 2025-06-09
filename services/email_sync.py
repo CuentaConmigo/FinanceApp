@@ -115,7 +115,7 @@ def sync_user_transactions(user_email, full_sync=False):
             print("📦 Doing full sync of all emails")
 
         next_page_token = None
-        max_to_process = 100  # 🔒 Hard limit for testing
+        max_to_process = 500  # 🔒 Hard limit for testing
         processed_count = 0
 
         while True:
