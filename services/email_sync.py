@@ -9,10 +9,16 @@ from rapidfuzz import process
 import pandas as pd
 from flask import session as flask_session
 from datetime import datetime
+import psutil, os
+
 
 
 # Dictionary to hold sync progress per user
 sync_progress = {}
+
+def memory_usage():
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / 1024 / 1024  # MB
 
 
 def load_merchant_categories(file_path):
@@ -79,130 +85,128 @@ def extract_transaction_details(body, sender_domain):
 
 
 def sync_user_transactions(user_email, full_sync=False):
+    from googleapiclient.errors import HttpError
     synced_count = 0
     if not user_email:
         user_email = flask_session.get("email")
 
-    print(f"Starting Gmail sync for: {user_email}")
+    print(f"🔄 Starting Gmail sync for: {user_email}")
+    print(f"🧠 Initial memory usage: {memory_usage():.2f} MB")
+
     try:
         creds = get_credentials(user_email)
-        print(f"Starting Gmail sync for: {user_email}")
         service = build('gmail', 'v1', credentials=creds)
         user = session.query(UserCharacteristic).filter_by(email=user_email).first()
         if not user:
-            print("User not found. Aborting sync.")
+            print("❌ User not found. Aborting sync.")
             return
 
-        #query = 'from:(simon_gaucho@hotmail.com OR simongrasss@gmail.com)'  # 🔁 Update to match all banks/emails you want
-        query = 'from:(enviodigital@bancochile.cl OR enviodigital@bancoedwards.cl OR contacto@bci.cl OR simon_gaucho@hotmail.com OR simongrasss@gmail.com)'  # 🔁 Update to match all banks/emails you want
+        query = (
+            'from:(enviodigital@bancochile.cl OR enviodigital@bancoedwards.cl '
+            'OR contacto@bci.cl OR simon_gaucho@hotmail.com OR simongrasss@gmail.com)'
+        )
         if not full_sync and user.last_synced:
-            after_date = user.last_synced.strftime('%Y/%m/%d')  # Gmail expects YYYY/MM/DD format
+            after_date = user.last_synced.strftime('%Y/%m/%d')
             query += f' after:{after_date}'
             print(f"🔍 Syncing only emails after {after_date}")
         else:
             print("📦 Doing full sync of all emails")
 
-
-        messages = []
         next_page_token = None
+        max_to_process = 50  # 🔒 Hard limit for testing
+        processed_count = 0
 
         while True:
             response = service.users().messages().list(
                 userId='me',
                 q=query,
                 pageToken=next_page_token,
-                maxResults=100  # 500 is the Gmail API max per page
-        
+                maxResults=20  # smaller batch = less memory
             ).execute()
 
-            batch = response.get('messages', [])
-            messages.extend(batch)
+            for message in response.get('messages', []):
+                if processed_count >= max_to_process:
+                    print("🚧 Reached processing limit for this session.")
+                    break
 
-            print(f"Loaded {len(messages)} messages so far...")
-
-            next_page_token = response.get('nextPageToken')
-            if not next_page_token:
-                break
-
-
-        for message in messages:
-            try:
-                msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
-            except Exception as e:
-                print(f"Failed to fetch message {message['id']}: {e}")
-                continue
-
-            snippet = msg['snippet']
-            headers = {h['name']: h['value'] for h in msg['payload']['headers']}
-            sender_match = re.search(r'@([a-zA-Z0-9.-]+)', headers.get('From', ''))
-            sender_domain = sender_match.group(1) if sender_match else ''
-            tx = extract_transaction_details(snippet, sender_domain)
-            if not tx:
-                print(f"Skipping message: {snippet}")
-                continue
-            
-            try:
-                tx['Date'] = datetime.strptime(tx['Date'], "%Y-%m-%d %H:%M")
-                print(f"🕒 Raw date string before parsing: {tx['Date']}")
-            except ValueError:
-                print(f"❌ Invalid date format in transaction: {tx['Date']}")
-                continue
-
-            if not tx:
-                print(f"Skipping message: {snippet}")
-                continue
-
-            merchant = session.query(Merchant).filter_by(merchant_name=tx['Merchant']).first()
-            lean = session.query(LeanMerchant).filter_by(merchant_raw=merchant.merchant_id).first() if merchant else None
-
-            if not merchant:
-                merchant = Merchant(
-                    merchant_name=tx['Merchant'],
-                    category="No Verificado",
-                    sub_category="No Verificado"
-                )
-                session.add(merchant)
-                session.commit()
-
-            try:
-                exists = session.query(Transaction).filter_by(
-                    user_id=user.user_id,
-                    merchant_id=merchant.merchant_id,
-                    amount=tx['Cost'],
-                    date=tx['Date']
-                ).first()
-
-                if exists:
+                try:
+                    msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
+                    processed_count += 1
+                except HttpError as e:
+                    print(f"⚠️ Failed to fetch message {message['id']}: {e}")
                     continue
 
-                transaction = Transaction(
-                    user_id=user.user_id,
-                    merchant_id=merchant.merchant_id,
-                    lean_merchant_id=lean.id if lean else None,
-                    amount=tx['Cost'],
-                    date=tx['Date'],
-                    category=lean.category if lean else merchant.category,
-                    sub_category=lean.sub_category if lean else None,
-                    merchant_fixed=lean.merchant_fixed if lean else None
-                )
-                session.add(transaction)
-                session.commit()
-                synced_count += 1
-                if user_email:
+                snippet = msg['snippet']
+                headers = {h['name']: h['value'] for h in msg['payload']['headers']}
+                sender_match = re.search(r'@([a-zA-Z0-9.-]+)', headers.get('From', ''))
+                sender_domain = sender_match.group(1) if sender_match else ''
+                tx = extract_transaction_details(snippet, sender_domain)
+                if not tx:
+                    print(f"⏭️ Skipping message: {snippet}")
+                    continue
+
+                try:
+                    tx['Date'] = datetime.strptime(tx['Date'], "%Y-%m-%d %H:%M")
+                    print(f"🕒 Parsed date: {tx['Date']}")
+                except ValueError:
+                    print(f"❌ Invalid date format: {tx['Date']}")
+                    continue
+
+                merchant = session.query(Merchant).filter_by(merchant_name=tx['Merchant']).first()
+                lean = session.query(LeanMerchant).filter_by(merchant_raw=merchant.merchant_id).first() if merchant else None
+
+                if not merchant:
+                    merchant = Merchant(
+                        merchant_name=tx['Merchant'],
+                        category="No Verificado",
+                        sub_category="No Verificado"
+                    )
+                    session.add(merchant)
+                    session.commit()
+
+                try:
+                    exists = session.query(Transaction).filter_by(
+                        user_id=user.user_id,
+                        merchant_id=merchant.merchant_id,
+                        amount=tx['Cost'],
+                        date=tx['Date']
+                    ).first()
+                    if exists:
+                        continue
+
+                    transaction = Transaction(
+                        user_id=user.user_id,
+                        merchant_id=merchant.merchant_id,
+                        lean_merchant_id=lean.id if lean else None,
+                        amount=tx['Cost'],
+                        date=tx['Date'],
+                        category=lean.category if lean else merchant.category,
+                        sub_category=lean.sub_category if lean else None,
+                        merchant_fixed=lean.merchant_fixed if lean else None
+                    )
+                    session.add(transaction)
+                    session.commit()
+                    synced_count += 1
                     sync_progress[user_email] = synced_count
 
-            except IntegrityError:
-                session.rollback()
-                print(f"Skipped duplicate: {tx}")
+                except IntegrityError:
+                    session.rollback()
+                    print(f"⚠️ Skipped duplicate: {tx}")
 
-        print("✅ Gmail sync complete.")
+            print(f"📨 Page processed. Memory: {memory_usage():.2f} MB")
+
+            next_page_token = response.get('nextPageToken')
+            if not next_page_token or processed_count >= max_to_process:
+                break
+
+        print(f"✅ Gmail sync complete. Synced {synced_count} transactions.")
+        print(f"🧠 Final memory usage: {memory_usage():.2f} MB")
         sync_progress.pop(user_email, None)
-        # Update last_synced
+
         if user:
             user.last_synced = datetime.utcnow()
             session.commit()
         return synced_count
 
-
     finally:
-        session.rollback()  # <-- 🔧 This is the key addition
+        session.rollback()
