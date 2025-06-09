@@ -123,7 +123,7 @@ def sync_user_transactions(user_email, full_sync=False):
                 userId='me',
                 q=query,
                 pageToken=next_page_token,
-                maxResults=20  # smaller batch = less memory
+                maxResults=50  # smaller batch = less memory
             ).execute()
 
             for message in response.get('messages', []):
@@ -135,7 +135,7 @@ def sync_user_transactions(user_email, full_sync=False):
                     msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
                     processed_count += 1
                     print(f"🔄 Processed {processed_count} emails so far — Memory: {memory_usage():.2f} MB")
-                    time.sleep(0.2)
+  
 
 
                 except HttpError as e:
