@@ -17,6 +17,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import re
 from cryptography.fernet import Fernet
+import logging
+
 load_dotenv()
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 fernet = Fernet(ENCRYPTION_KEY)
@@ -27,6 +29,12 @@ fernet = Fernet(ENCRYPTION_KEY)
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
+
+
+
+# Configurar logging
+app.logger.setLevel(logging.INFO)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)  # Opcional: log de SQL
 
 
 def dot_thousands(value):
@@ -114,7 +122,9 @@ def start_sync():
         return redirect(url_for('login'))
 
     email = flask_session['email']
+    app.logger.info(f"🔄 Start sync initiated for {email}")
 
+    # Paso 1: Crear usuario si no existe
     user = session.query(UserCharacteristic).filter_by(email=email).first()
     if not user:
         user = UserCharacteristic(email=email)
@@ -123,13 +133,22 @@ def start_sync():
     user.onboarded = True
     session.commit()
 
+    # Paso 2: Validar token de OAuth
+    token_record = session.query(OAuthToken).filter_by(email=email).first()
+    if not token_record or not token_record.refresh_token:
+        app.logger.warning(f"⚠️ No valid token found for {email}. Redirecting to login.")
+        return redirect(url_for('login'))
+
+    # Paso 3: Sincronizar transacciones
     try:
         sync_user_transactions(email, full_sync=True)
+        app.logger.info(f"✅ Sync completed for {email}")
     except Exception as e:
-        print(f"❌ Error during Gmail sync for {email}: {e}")
+        app.logger.error(f"❌ Error during Gmail sync for {email}: {e}")
         return "Error during sync. Please try again later.", 500
 
     return redirect(url_for('questionnaire'))
+
 
 
 

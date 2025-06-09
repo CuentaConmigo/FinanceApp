@@ -30,11 +30,20 @@ def extract_transaction_details_banco_de_chile(email_body):
     date = re.search(r"el (\d{2}/\d{2}/\d{4} \d{2}:\d{2})", relevant_body)
     if not cost or not merchant or not date:
         return None
+    raw_date = date.group(1)  # e.g., '06/01/2025 14:05'
+    try:
+        parsed_date = datetime.strptime(raw_date, "%d/%m/%Y %H:%M")
+        formatted_date = parsed_date.strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        print(f"❌ Could not parse Banco de Chile date: {raw_date}")
+        return None
+
     return {
         'Cost': float(cost.group(1).replace('.', '').replace('$', '')),
         'Merchant': merchant.group(1),
-        'Date': date.group(1)
+        'Date': formatted_date
     }
+
 
 
 def extract_transaction_details_bci(email_body):
@@ -44,11 +53,20 @@ def extract_transaction_details_bci(email_body):
     time = re.search(r"Hora\s*(\d{2}:\d{2})", email_body)
     if not cost or not merchant or not date or not time:
         return None
+    raw_date = f"{date.group(1)} {time.group(1)}"  # e.g., '06/01/2025 14:05'
+    try:
+        parsed_date = datetime.strptime(raw_date, "%d/%m/%Y %H:%M")
+        formatted_date = parsed_date.strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        print(f"❌ Could not parse BCI date: {raw_date}")
+        return None
+
     return {
         'Cost': float(cost.group(1).replace('.', '')),
         'Merchant': merchant.group(1),
-        'Date': f"{date.group(1)} {time.group(1)}"
+        'Date': formatted_date
     }
+
 
 
 def extract_transaction_details(body, sender_domain):
@@ -124,7 +142,8 @@ def sync_user_transactions(user_email, full_sync=False):
                 continue
             
             try:
-                tx['Date'] = datetime.strptime(tx['Date'], "%d/%m/%Y %H:%M")
+                tx['Date'] = datetime.strptime(tx['Date'], "%Y-%m-%d %H:%M")
+                print(f"🕒 Raw date string before parsing: {tx['Date']}")
             except ValueError:
                 print(f"❌ Invalid date format in transaction: {tx['Date']}")
                 continue
