@@ -163,7 +163,7 @@ def logout():
 @app.route('/')
 def home():
     if 'email' not in flask_session:
-        return redirect(url_for('login'))
+        return render_template("onboarding.html")
 
     # Get the user's email
     user_email = flask_session['email']
@@ -670,6 +670,9 @@ def spending_visualization():
 
 @app.route('/questionnaire', methods=['GET', 'POST'])
 def questionnaire():
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+    
     if request.method == 'POST':
         # Get form data
         dob = request.form.get('dob', '').strip()
