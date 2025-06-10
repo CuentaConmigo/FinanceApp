@@ -247,7 +247,7 @@
                         </select>
                     </td>
                     <td>
-                        <select name="fixed_sub_category_{{ merchant.merchant_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}">
+                        <select name="fixed_sub_category_{{ merchant.merchant_id }}" class="subcategory-dropdown" id="{{ transaction.transaction_id }}">
                             <option value="" selected>Sub-categoría</option>
                             {% if transaction.merchant_fixed and transaction.category in category_map %}
                                 {% for sub in category_map[transaction.category] %}
