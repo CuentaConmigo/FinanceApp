@@ -364,7 +364,7 @@ def show_transactions():
     # 5) Retrieve final results
     transactions = transactions_query.all()
 
-    # Build categories mapping (unchanged)
+    # Build categories mapping 
     categories = {
         "Transporte": ["Bencina", "Transporte público","Uber/Taxi", "Mantenimiento", "Peajes/Tag","Estacionamiento", "Otros"],
         "Entretenimiento": ["Películas", "Conciertos", "Deportes", "Carrete", "Bar", "Otros"],
@@ -418,17 +418,18 @@ def add_transaction():
         return redirect(url_for('questionnaire'))
 
     categories = {
-        "Transporte": ["Bencina", "Transporte público", "Mantenimiento", "Peajes/Tag","Estacionamiento"],
-        "Entretenimiento": ["Películas", "Subscripciones (Netflix)", "Conciertos", "Deportes"],
-        "Alojamiento": ["Hoteles", "Arriendo"],
-        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
-        "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes"],
+        "Transporte": ["Bencina", "Transporte público","Uber/Taxi", "Mantenimiento", "Peajes/Tag","Estacionamiento", "Otros"],
+        "Entretenimiento": ["Películas", "Conciertos", "Deportes", "Carrete", "Bar", "Otros"],
+        "Subscripciones": ["Entretenimiento (Netflix)", "Educación (Duolingo/Coursera) ","Trabajo (ChatGPT)", "Otros"],
+        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal", "Otros"],
+        "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes", "Otros"],
         "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery","Snacks", "Otros"],
-        "Hogar": ["Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mascotas", "Mantenimiento del Hogar"],
+        "Cuentas": ["Arriendo","Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mantenimiento del Hogar", "Otros"],
         "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
-        "Educación": ["Colegiatura", "Libros", "Cursos"],
-        "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones"],
-        "Otro": ["Viajes", "Regalos", "Otros"]
+        "Mascotas": ["Alimento", "Veterinario", "Accesorios", "Otros"],
+        "Educación": ["Colegiatura", "Libros", "Cursos", "Otros"],
+        "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones", "Otros"],
+        "Otro": ["Viajes (Pasajes)","Hoteles", "Regalos", "Otros"]
     }
 
     if request.method == 'POST':
@@ -492,6 +493,61 @@ def add_transaction():
 
     return render_template('add_transaction.html', categories=categories)
 
+@app.route('/verify_transaction', methods=['POST'])
+def verify_transaction():
+    if 'email' not in flask_session:
+        return jsonify(success=False, error="Not logged in"), 403
+
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        return jsonify(success=False, error="User not found"), 404
+
+    user_id = user.user_id
+    data = request.get_json()
+
+    merchant_id = data.get('merchant_id')
+    category = data.get('category', '').strip()
+    sub_category = data.get('sub_category', '').strip()
+    merchant_name = data.get('merchant_name', '').strip()
+
+    if not merchant_id or not category or not merchant_name:
+        return jsonify(success=False, error="Missing required fields"), 400
+
+    # Try to find existing LeanMerchant
+    lean_merchant = session.query(LeanMerchant).filter_by(
+        merchant_raw=merchant_id,
+        category=category,
+        sub_category=sub_category
+    ).first()
+
+    if lean_merchant:
+        lean_merchant.verification_count += 1
+    else:
+        lean_merchant = LeanMerchant(
+            merchant_raw=merchant_id,
+            category=category,
+            sub_category=sub_category,
+            merchant_fixed=merchant_name.capitalize(),
+            verification_count=1
+        )
+        session.add(lean_merchant)
+        session.flush()
+
+    # Update user's transactions
+    txs = session.query(Transaction).filter_by(
+        merchant_id=merchant_id,
+        user_id=user_id
+    ).all()
+
+    for t in txs:
+        t.category = category
+        t.sub_category = sub_category
+        t.merchant_fixed = merchant_name.capitalize()
+        t.lean_merchant_id = lean_merchant.id
+
+    session.commit()
+    return jsonify(success=True)
 
 
 

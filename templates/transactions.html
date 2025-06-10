@@ -212,10 +212,6 @@
 
 
     {% if transactions %}
-    <form method="POST">
-        <input type="hidden" name="filter_option" value="{{ filter_option }}">
-        <input type="hidden" name="selected_year" value="{{ selected_year }}">
-        <input type="hidden" name="selected_month" value="{{ selected_month }}">     
         <table>
             <thead>
                 <tr>
@@ -246,17 +242,22 @@
                         <select name="fixed_category_{{ merchant.merchant_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}">
                             <option value="" selected>Categoría</option>
                             {% for category in categories %}
-                            <option value="{{ category }}">{{ category }}</option>
+                            <option value="{{ category }}" {% if transaction.merchant_fixed and transaction.category == category %}selected{% endif %}>{{ category }}</option>
                             {% endfor %}
                         </select>
                     </td>
                     <td>
                         <select name="fixed_sub_category_{{ merchant.merchant_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}">
                             <option value="" selected>Sub-categoría</option>
+                            {% if transaction.merchant_fixed and transaction.category in category_map %}
+                                {% for sub in category_map[transaction.category] %}
+                                    <option value="{{ sub }}" {% if sub == transaction.sub_category %}selected{% endif %}>{{ sub }}</option>
+                                {% endfor %}
+                            {% endif %}
                         </select>
                     </td>
                     <td>
-                        <input type="text" name="fixed_merchant_name_{{ merchant.merchant_id }}" value="{{ merchant.merchant_name }}">
+                        <input type="text" name="fixed_merchant_name_{{ merchant.merchant_id }}" value="{{ transaction.merchant_fixed or merchant.merchant_name }}">
                     </td>
                     <td>
                         <button type="submit" name="merchant_id" value="{{ merchant.merchant_id }}">Actualizar</button>
@@ -265,7 +266,7 @@
                 {% endfor %}
             </tbody>
         </table>
-    </form>
+
     {% else %}
     <p>No transactions found.</p>
     {% endif %}
@@ -320,5 +321,40 @@
     });
   </script>
   
+  <script>
+    document.querySelectorAll('button[name="merchant_id"]').forEach(button => {
+    button.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const merchantId = button.value;
+
+        const category = document.querySelector(`[name="fixed_category_${merchantId}"]`).value;
+        const subcategory = document.querySelector(`[name="fixed_sub_category_${merchantId}"]`).value;
+        const merchantName = document.querySelector(`[name="fixed_merchant_name_${merchantId}"]`).value;
+
+        const response = await fetch('/verify_transaction', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            merchant_id: merchantId,
+            category: category,
+            sub_category: subcategory,
+            merchant_name: merchantName
+        })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+        // visually update the row
+        const row = button.closest('tr');
+        row.classList.add('verified');
+        button.innerHTML = "✅";
+        button.disabled = true;
+        } else {
+        alert("Error: " + (result.error || "No se pudo actualizar."));
+        }
+    });
+    });
+</script>
+
 </body>
 </html>
