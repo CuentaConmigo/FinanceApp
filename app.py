@@ -104,10 +104,10 @@ def oauth2callback():
         user = UserCharacteristic(email=email, onboarded=False)
         session.add(user)
         session.commit()
-        return render_template("onboarding.html")
+        #return render_template("onboarding.html")
 
-    elif not user.onboarded:
-        return render_template("onboarding.html")
+    #elif not user.onboarded:
+        #return render_template("onboarding.html")
 
     if not (user.dob and user.income and user.region and user.name):
         return redirect(url_for("questionnaire"))
