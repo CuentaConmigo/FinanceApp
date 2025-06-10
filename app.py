@@ -366,17 +366,18 @@ def show_transactions():
 
     # Build categories mapping (unchanged)
     categories = {
-        "Transporte": ["Bencina", "Transporte público", "Mantenimiento", "Peajes/Tag","Estacionamiento"],
-        "Entretenimiento": ["Películas", "Subscripciones (Netflix)", "Conciertos", "Deportes"],
-        "Alojamiento": ["Hoteles", "Arriendo"],
-        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal"],
-        "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes"],
+        "Transporte": ["Bencina", "Transporte público","Uber/Taxi", "Mantenimiento", "Peajes/Tag","Estacionamiento", "Otros"],
+        "Entretenimiento": ["Películas", "Conciertos", "Deportes", "Carrete", "Bar", "Otros"],
+        "Subscripciones": ["Entretenimiento (Netflix)", "Educación (Duolingo/Coursera) ","Trabajo (ChatGPT)", "Otros"],
+        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal", "Otros"],
+        "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes", "Otros"],
         "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery","Snacks", "Otros"],
-        "Hogar": ["Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mascotas", "Mantenimiento del Hogar"],
+        "Cuentas": ["Arriendo","Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mantenimiento del Hogar", "Otros"],
         "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
-        "Educación": ["Colegiatura", "Libros", "Cursos"],
-        "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones"],
-        "Otro": ["Viajes", "Regalos", "Otros"]
+        "Mascotas": ["Alimento", "Veterinario", "Accesorios", "Otros"],
+        "Educación": ["Colegiatura", "Libros", "Cursos", "Otros"],
+        "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones", "Otros"],
+        "Otro": ["Viajes (Pasajes)","Hoteles", "Regalos", "Otros"]
     }
 
     # Get available years and months for dropdowns
