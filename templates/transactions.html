@@ -239,7 +239,7 @@
                     <td>{{ transaction.merchant_fixed or 'No Verificado' }}</td>
                     <!-- Editable dropdowns and inputs -->
                     <td>
-                        <select name="fixed_category_{{ merchant.merchant_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}">
+                        <select name="fixed_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
                             <option value="" selected>Categoría</option>
                             {% for category in categories %}
                             <option value="{{ category }}">{{ category }}</option>
@@ -247,7 +247,7 @@
                         </select>
                     </td>
                     <td>
-                        <select name="fixed_sub_category_{{ merchant.merchant_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}">
+                        <select name="fixed_sub_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
                             <option value="" selected>Sub-categoría</option>
                         </select>
                     </td>
@@ -281,7 +281,7 @@
             categoryDropdown.addEventListener('change', function () {
                 const rowIndex = this.getAttribute('data-row');
                 const selectedCategory = this.value;
-                const subcategoryDropdown = document.getElementById(`subcategory-${rowIndex}`);
+                const subcategoryDropdown = document.getElementById('subcategory-' + rowIndex);
                 
                 // Clear current subcategories
                 subcategoryDropdown.innerHTML = '<option value="" selected>Sub-categoría</option>';
@@ -322,8 +322,13 @@
         e.preventDefault();
         const merchantId = button.value;
 
-        const category = document.querySelector(`[name="fixed_category_${merchantId}"]`).value;
-        const subcategory = document.querySelector(`[name="fixed_sub_category_${merchantId}"]`).value;
+        // Find the closest row and extract the unique identifier from data-row
+        const row = button.closest('tr');
+        const categorySelect = row.querySelector('.category-dropdown');
+        const rowIndex = categorySelect.getAttribute('data-row'); // e.g. "123_456"
+
+        const category = document.querySelector(`[name="fixed_category_${rowIndex}"]`).value;
+        const subcategory = document.querySelector(`[name="fixed_sub_category_${rowIndex}"]`).value;
         const merchantName = document.querySelector(`[name="fixed_merchant_name_${merchantId}"]`).value;
 
         const response = await fetch('/verify_transaction', {
@@ -339,8 +344,6 @@
 
         const result = await response.json();
         if (result.success) {
-        // visually update the row
-        const row = button.closest('tr');
         row.classList.add('verified');
         button.innerHTML = "✅";
         button.disabled = true;
