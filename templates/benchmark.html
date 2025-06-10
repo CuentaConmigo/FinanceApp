@@ -217,10 +217,19 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#333',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            cornerRadius: 4,
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim(),
+                            titleColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                            bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border').trim(),
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            titleFont: { weight: '600', size: 14, family: 'Inter' },
+                            bodyFont: { weight: '500', size: 13, family: 'Inter' },
+                            displayColors: false,
+                            callbacks: {
+                                label: (ctx) => `$${ctx.raw.toLocaleString('es-CL')}`
+                            }
                         },
                     },
                     layout: {
@@ -228,24 +237,54 @@
                     },
                     scales: {
                         x: {
-                            title: { display: true, text: 'Diferencia en Gasto (CLP)' },
-                            grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
-                            ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                            title: {
+                                display: true,
+                                text: 'Diferencia en Gasto (CLP)',
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: {
+                                    size: 15,
+                                    weight: '600',
+                                    family: 'Inter'
+                                }
+                            },
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim()
+                            },
+                            ticks: {
+                                callback: value => `$${value.toLocaleString('es-CL')}`,
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: {
+                                    size: 14,
+                                    family: 'Inter'
+                                }
+                            }
                         },
                         y: {
-                            title: { display: true, text: 'Categorías', color:  getComputedStyle(document.documentElement).getPropertyValue('--text').trim() },
+                            title: {
+                                display: true,
+                                text: 'Categorías',
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: {
+                                    size: 15,
+                                    weight: '600',
+                                    family: 'Inter'
+                                },
+                                padding: { right: 16 } // ← avoids label collision
+                            },
                             grid: { display: false },
                             ticks: {
                                 color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
                                 font: ctx => {
                                     return {
-                                        size: 12,
+                                        size: 14,
                                         family: 'Inter',
                                         weight: ctx.tick.label === 'Total Gastos' ? 'bold' : 'normal'
                                     };
                                 }
-                            },
+                            }
                         }
+
+
                     },
                 },
             });
@@ -275,10 +314,19 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#333',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            cornerRadius: 4,
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim(),
+                            titleColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                            bodyColor: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border').trim(),
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            titleFont: { weight: '600', size: 14, family: 'Inter' },
+                            bodyFont: { weight: '500', size: 13, family: 'Inter' },
+                            displayColors: false,
+                            callbacks: {
+                                label: (ctx) => `$${ctx.raw.toLocaleString('es-CL')}`
+                            }
                         },
                     },
                     layout: {
@@ -286,24 +334,54 @@
                     },
                     scales: {
                         x: {
-                            title: { display: true, text: 'Diferencia en Gasto (CLP)'},
-                            grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() },
-                            ticks: { callback: value => `$${value.toLocaleString('es-CL')}` },
+                            title: {
+                                display: true,
+                                text: 'Diferencia en Gasto (CLP)',
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: {
+                                    size: 15,
+                                    weight: '600',
+                                    family: 'Inter'
+                                }
+                            },
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim()
+                            },
+                            ticks: {
+                                callback: value => `$${value.toLocaleString('es-CL')}`,
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: {
+                                    size: 14,
+                                    family: 'Inter'
+                                }
+                            }
                         },
                         y: {
-                            title: { display: true, text: 'Categorías', color:  getComputedStyle(document.documentElement).getPropertyValue('--text').trim() },
+                            title: {
+                                display: true,
+                                text: 'Categorías',
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                font: {
+                                    size: 15,
+                                    weight: '600',
+                                    family: 'Inter'
+                                },
+                                padding: { right: 16 } // ← avoids label collision
+                            },
                             grid: { display: false },
                             ticks: {
-                                color:  getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim(),
                                 font: ctx => {
                                     return {
-                                        size: 12,
+                                        size: 14,
                                         family: 'Inter',
                                         weight: ctx.tick.label === 'Total Gastos' ? 'bold' : 'normal'
                                     };
                                 }
-                            },
+                            }
                         }
+
+
                     },
                 },
             });
