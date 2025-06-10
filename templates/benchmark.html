@@ -114,7 +114,7 @@
       </div>
       
 
-    <h1>Comparación de Gasto</h1>
+   <h1>Comparación de Gasto</h1>
 
     {% if recent_months %}
         <p style="font-weight: 500; color: #888; margin-top: -10px;">
@@ -122,16 +122,39 @@
         </p>
     {% endif %}
 
+    {% macro format_diff(val) -%}
+        {% set abs_val = "{:,.0f}".format(val|abs).replace(",", ".") %}
+        {% if val > 0 %}
+            <span style="color: red;">gastaste ${{ abs_val }} más</span>
+        {% elif val < 0 %}
+            <span style="color: #4bc0c0;">gastaste ${{ abs_val }} menos</span>
+        {% else %}
+            <span>gastaste lo mismo</span>
+        {% endif %}
+    {%- endmacro %}
+
     <!-- Chart for similar users by age -->
     <div class="chart-container">
         <h2>Comparación con Usuarios Similares (Edad {{ age_range }})</h2>
+        <div style="margin-top: -10px; margin-bottom: 15px; font-size: 1rem; color: var(--text);">
+            En promedio, {{ format_diff(diff_similar_total) }} que personas de tu grupo de edad.
+        </div>
         <canvas id="ageBenchmarkChart"></canvas>
     </div>
 
     <!-- Chart for all users -->
     <div class="chart-container">
         <h2>Comparación con el Promedio General</h2>
+        <div style="margin-top: -10px; margin-bottom: 15px; font-size: 1rem; color: var(--text);">
+            En promedio, {{ format_diff(diff_all_total) }} que el resto de los usuarios.
+        </div>
         <canvas id="overallBenchmarkChart"></canvas>
+    </div>
+
+    <!-- Leyenda -->
+    <div style="font-size: 0.95rem; color: #777; margin-top: -10px; margin-bottom: 20px;">
+        Vista por categorías – <span style="color: #4bc0c0;">Celeste = gastas menos</span>, 
+        <span style="color: #ff6384;">Rojo = gastas más</span> que el promedio.
     </div>
 
     <div class="button-container">

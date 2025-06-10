@@ -905,6 +905,12 @@ def benchmark():
         for category in set(user_monthly_averages.keys()).union(all_averages.keys())
     }
 
+    # Sacare los totales temporalmente del grafico para mejorar claridad...
+    diff_similar_total = similar_differences.get("Total Gastos", 0)
+    diff_all_total = all_differences.get("Total Gastos", 0)
+    for d in [user_monthly_averages, group_averages, all_averages, similar_differences, all_differences]:
+        d.pop("Total Gastos", None)
+
     # Debug: Print differences
     print("\n=== Debug: Differences for Similar Group ===")
     for category, difference in similar_differences.items():
@@ -915,12 +921,11 @@ def benchmark():
         print(f"Category: {category}, Difference: {difference}")
 
     def sort_categories(d):
-        keys = sorted([k for k in d.keys() if k not in ("Total Gastos", "No Verificado")])
-        if "Total Gastos" in d:
-            keys = ["Total Gastos"] + keys
+        keys = sorted([k for k in d.keys() if k != "No Verificado"])
         if "No Verificado" in d:
             keys.append("No Verificado")
         return {k: d[k] for k in keys}
+
 
     user_monthly_averages = sort_categories(user_monthly_averages)
     group_averages = sort_categories(group_averages)
@@ -962,7 +967,9 @@ def benchmark():
         similar_differences=similar_differences,
         all_differences=all_differences,
         categories=ordered_categories,
-        recent_months=recent_months
+        recent_months=recent_months,
+        diff_similar_total=diff_similar_total,
+        diff_all_total=diff_all_total
 
     )
 
