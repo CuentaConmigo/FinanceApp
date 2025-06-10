@@ -369,15 +369,16 @@ def show_transactions():
         "Transporte": ["Bencina", "Transporte público","Uber/Taxi", "Mantenimiento", "Peajes/Tag","Estacionamiento", "Otros"],
         "Entretenimiento": ["Películas", "Conciertos", "Deportes", "Carrete", "Bar", "Otros"],
         "Subscripciones": ["Entretenimiento (Netflix)", "Educación (Duolingo/Coursera) ","Trabajo (ChatGPT)", "Otros"],
-        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal", "Otros"],
+        "Servicios Personales": ["Peluquería/Barbería", "Gimnasio", "Cuidado Personal", "Otros"],
         "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes", "Otros"],
         "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery","Snacks", "Otros"],
         "Cuentas": ["Arriendo","Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mantenimiento del Hogar", "Otros"],
-        "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
+        "Salud": ["Doctor", "Exámenes Médicos", "Farmacia", "Seguro Médico", "Terapias", "Otros"],
         "Mascotas": ["Alimento", "Veterinario", "Accesorios", "Otros"],
         "Educación": ["Colegiatura", "Libros", "Cursos", "Otros"],
         "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones", "Otros"],
-        "Otro": ["Viajes (Pasajes)","Hoteles", "Regalos", "Otros"]
+        "Viajes": ["Pasajes","Hoteles", "Tours", "Otros"],
+        "Otro": [ "Regalos", "Otros"]
     }
 
     # Get available years and months for dropdowns
@@ -421,15 +422,16 @@ def add_transaction():
         "Transporte": ["Bencina", "Transporte público","Uber/Taxi", "Mantenimiento", "Peajes/Tag","Estacionamiento", "Otros"],
         "Entretenimiento": ["Películas", "Conciertos", "Deportes", "Carrete", "Bar", "Otros"],
         "Subscripciones": ["Entretenimiento (Netflix)", "Educación (Duolingo/Coursera) ","Trabajo (ChatGPT)", "Otros"],
-        "Servicios Personales": ["Peluquería/Barbería", "Farmacia", "Gimnasio", "Cuidado Personal", "Otros"],
+        "Servicios Personales": ["Peluquería/Barbería", "Gimnasio", "Cuidado Personal", "Otros"],
         "Shopping": ["Ropa", "Electrónicos", "Muebles", "Juguetes", "Otros"],
         "Comida": ["Restaurantes", "Supermercado", "Café", "Delivery","Snacks", "Otros"],
         "Cuentas": ["Arriendo","Agua", "Gas", "Electricidad", "Internet", "Teléfono", "Mantenimiento del Hogar", "Otros"],
-        "Salud": ["Doctor", "Seguro Médico", "Terapias", "Otros"],
+        "Salud": ["Doctor", "Exámenes Médicos", "Farmacia", "Seguro Médico", "Terapias", "Otros"],
         "Mascotas": ["Alimento", "Veterinario", "Accesorios", "Otros"],
         "Educación": ["Colegiatura", "Libros", "Cursos", "Otros"],
         "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones", "Otros"],
-        "Otro": ["Viajes (Pasajes)","Hoteles", "Regalos", "Otros"]
+        "Viajes": ["Pasajes","Hoteles", "Tours", "Otros"],
+        "Otro": [ "Regalos", "Otros"]
     }
 
     if request.method == 'POST':
