@@ -133,6 +133,12 @@
         {% endif %}
     {%- endmacro %}
 
+        <!-- Leyenda -->
+    <div style="font-size: 0.95rem; color: #777; margin-top: -10px; margin-bottom: 20px;">
+        Vista por categorías – <span style="color: #4bc0c0;">Celeste = gastas menos</span>, 
+        <span style="color: #ff6384;">Rojo = gastas más</span> que el promedio.
+    </div>
+
     <!-- Chart for similar users by age -->
     <div class="chart-container">
         <h2>Comparación con Usuarios Similares (Edad {{ age_range }})</h2>
@@ -151,11 +157,7 @@
         <canvas id="overallBenchmarkChart"></canvas>
     </div>
 
-    <!-- Leyenda -->
-    <div style="font-size: 0.95rem; color: #777; margin-top: -10px; margin-bottom: 20px;">
-        Vista por categorías – <span style="color: #4bc0c0;">Celeste = gastas menos</span>, 
-        <span style="color: #ff6384;">Rojo = gastas más</span> que el promedio.
-    </div>
+
 
     <div class="button-container">
         <a href="/" class="btn">Menú de Inicio</a>
