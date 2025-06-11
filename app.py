@@ -790,6 +790,8 @@ def questionnaire():
         user.degree = degree
         user.yoe = yoe
         user.name = name
+        user.onboarded = True
+
 
         session.merge(user)
         session.commit()
