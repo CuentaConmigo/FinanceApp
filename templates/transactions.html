@@ -85,6 +85,9 @@
     .verified {
         background-color: #e6f4ea;
     }
+    [data-theme='dark'] .verified {
+    background-color: #294036; /* dark greenish background */
+    }
     [data-theme='dark'] table,
     [data-theme='dark'] th,
     [data-theme='dark'] td {
@@ -93,8 +96,8 @@
     [data-theme='dark'] tr:not(.verified) td {
     color: #fff;
     }
-    [data-theme='dark'] tr.verified:hover td {
-    color: #fff;
+    [data-theme='dark'] tr.verified:hover {
+        background-color: #35614d; /* richer green highlight */
     }
 
 
