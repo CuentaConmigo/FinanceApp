@@ -262,6 +262,16 @@
                     <td>
                         <button type="submit" name="merchant_id" value="{{ merchant.merchant_id }}">Actualizar</button>
                     </td>
+                    <td>
+                    <button 
+                        type="button"
+                        class="btn-secondary delete-btn"
+                        data-transaction-id="{{ transaction.transaction_id }}"
+                        style="background-color: #c0392b; color: white;">
+                        🗑️
+                    </button>
+                    </td>
+
                 </tr>
                 {% endfor %}
             </tbody>
@@ -357,6 +367,57 @@
         }
     });
     });
+</script>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;">
+  <div style="
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px var(--shadow);
+      text-align: center;">
+    <p style="font-size: 1.1rem;">¿Estás seguro de que quieres eliminar esta transacción?</p>
+    <form id="deleteForm" method="POST" action="/delete_transaction">
+      <input type="hidden" name="transaction_id" id="deleteTransactionId">
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 15px;">
+        <button type="submit" class="btn-secondary" style="background-color: #c0392b; color: white;">Sí, eliminar</button>
+        <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  const deleteButtons = document.querySelectorAll('.delete-btn');
+  const modal = document.getElementById('deleteModal');
+  const form = document.getElementById('deleteForm');
+  const inputId = document.getElementById('deleteTransactionId');
+
+  deleteButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const txId = btn.getAttribute('data-transaction-id');
+      inputId.value = txId;
+      modal.style.display = 'flex';
+    });
+  });
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  window.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
 </script>
 
 </body>

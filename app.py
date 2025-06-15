@@ -407,6 +407,30 @@ def show_transactions():
 
     )
 
+@app.route('/delete_transaction', methods=['POST'])
+def delete_transaction():
+    if 'email' not in flask_session:
+        return redirect(url_for('login'))
+
+    user_email = flask_session['email']
+    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+    if not user:
+        return redirect(url_for('questionnaire'))
+
+    transaction_id = request.form.get('transaction_id')
+
+    transaction = session.query(Transaction).filter_by(
+        transaction_id=transaction_id,
+        user_id=user.user_id
+    ).first()
+
+    if transaction:
+        session.delete(transaction)
+        session.commit()
+        print(f"🗑️ Deleted Transaction ID {transaction_id}")
+
+    return redirect(url_for('show_transactions'))
+
 
 @app.route('/add_transaction', methods=['GET', 'POST'])
 def add_transaction():
