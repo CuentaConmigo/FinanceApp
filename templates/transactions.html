@@ -49,6 +49,7 @@
         border: 1px solid var(--border);
         transition: background 0.3s ease, box-shadow 0.3s ease;
     }
+    
 
     h1 {
         font-size: 2.5rem;
@@ -56,8 +57,14 @@
         margin-bottom: 20px;
     }
 
+    .responsive-table-container {
+        overflow-x: auto;
+        width: 100%;
+    }
+
     table {
         width: 100%;
+        min-width: 1200px;
         border-collapse: collapse;
         margin-top: 20px;
         border-radius: 16px;
@@ -217,66 +224,68 @@
 
 
     {% if transactions %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Comercio</th>
-                    <th>Monto</th>
-                    <th>Categoría Actual</th>
-                    <th>Sub-Categoría Actual </th>
-                    <th>Comercio Verificado </th>
-                    <th>Validar Categoría</th>
-                    <th>Validar Sub-Categoría</th>
-                    <th>Validar Nombre Comercio</th>
-                    <th>Confirmar</th>
-                    <th>Eliminar</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for transaction, merchant in transactions %}
-                <tr class="{% if transaction.merchant_fixed %}verified{% endif %}">
-                    <td>{{ transaction.date.strftime('%d/%m/%Y') if transaction.date else '' }}</td>
-                    <td>{{ merchant.merchant_name }}</td>
-                    <td>${{ "{:,.1f}".format(transaction.amount).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <!-- Display current values -->
-                    <td>{{ transaction.category or 'No Verificado' }}</td>
-                    <td>{{ transaction.sub_category or 'No Verificado' }}</td>
-                    <td>{{ transaction.merchant_fixed or 'No Verificado' }}</td>
-                    <!-- Editable dropdowns and inputs -->
-                    <td>
-                        <select name="fixed_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
-                            <option value="" selected>Categoría</option>
-                            {% for category in categories %}
-                            <option value="{{ category }}">{{ category }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td>
-                        <select name="fixed_sub_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
-                            <option value="" selected>Sub-categoría</option>
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text" name="fixed_merchant_name_{{ merchant.merchant_id }}" value="{{ merchant.merchant_name }}">
-                    </td>
-                    <td>
-                        <button type="submit" name="merchant_id" value="{{ merchant.merchant_id }}">Actualizar</button>
-                    </td>
-                    <td>
-                    <button 
-                        type="button"
-                        class="btn-secondary delete-btn"
-                        data-transaction-id="{{ transaction.transaction_id }}"
-                        style="background-color: #c0392b; color: white;">
-                        🗑️
-                    </button>
-                    </td>
+        <div class="responsive-table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Comercio</th>
+                        <th>Monto</th>
+                        <th>Categoría Actual</th>
+                        <th>Sub-Categoría Actual </th>
+                        <th>Comercio Verificado </th>
+                        <th>Validar Categoría</th>
+                        <th>Validar Sub-Categoría</th>
+                        <th>Validar Nombre Comercio</th>
+                        <th>Confirmar</th>
+                        <th>Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction, merchant in transactions %}
+                    <tr class="{% if transaction.merchant_fixed %}verified{% endif %}">
+                        <td>{{ transaction.date.strftime('%d/%m/%Y') if transaction.date else '' }}</td>
+                        <td>{{ merchant.merchant_name }}</td>
+                        <td>${{ "{:,.1f}".format(transaction.amount).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                        <!-- Display current values -->
+                        <td>{{ transaction.category or 'No Verificado' }}</td>
+                        <td>{{ transaction.sub_category or 'No Verificado' }}</td>
+                        <td>{{ transaction.merchant_fixed or 'No Verificado' }}</td>
+                        <!-- Editable dropdowns and inputs -->
+                        <td>
+                            <select name="fixed_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
+                                <option value="" selected>Categoría</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}">{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <select name="fixed_sub_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
+                                <option value="" selected>Sub-categoría</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="fixed_merchant_name_{{ merchant.merchant_id }}" value="{{ merchant.merchant_name }}">
+                        </td>
+                        <td>
+                            <button type="submit" name="merchant_id" value="{{ merchant.merchant_id }}">Actualizar</button>
+                        </td>
+                        <td>
+                        <button 
+                            type="button"
+                            class="btn-secondary delete-btn"
+                            data-transaction-id="{{ transaction.transaction_id }}"
+                            style="background-color: #c0392b; color: white;">
+                            🗑️
+                        </button>
+                        </td>
 
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> 
 
     {% else %}
     <p>No transactions found.</p>
