@@ -260,13 +260,18 @@
                             <select name="fixed_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="category-dropdown" data-row="{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
                                 <option value="" selected>Categoría</option>
                                 {% for category in categories %}
-                                <option value="{{ category }}">{{ category }}</option>
+                                <option value="{{ category }}" {% if transaction.category == category %}selected{% endif %}>{{ category }}</option>
                                 {% endfor %}
                             </select>
                         </td>
                         <td>
                             <select name="fixed_sub_category_{{ merchant.merchant_id }}_{{ transaction.transaction_id }}" class="subcategory-dropdown" id="subcategory-{{ merchant.merchant_id }}_{{ transaction.transaction_id }}">
-                                <option value="" selected>Sub-categoría</option>
+                                <option value="">Sub-categoría</option>
+                                {% if transaction.category in category_map %}
+                                    {% for sub in category_map[transaction.category] %}
+                                        <option value="{{ sub }}" {% if transaction.sub_category == sub %}selected{% endif %}>{{ sub }}</option>
+                                    {% endfor %}
+                                {% endif %}
                             </select>
                         </td>
                         <td>
