@@ -5,6 +5,7 @@ from sqlalchemy import func, extract, between
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 from database_setup import session, Transaction, Merchant, LeanMerchant, UserCharacteristic, Budget, OAuthToken, Insight, Feedback
 from datetime import datetime, date, timedelta
@@ -18,6 +19,7 @@ from dotenv import load_dotenv
 import re
 from cryptography.fernet import Fernet
 import logging
+
 
 load_dotenv()
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
