@@ -191,7 +191,18 @@ def sync():
         return redirect(url_for('login'))
 
     full = request.args.get('full', 'false').lower() == 'true'
-    sync_user_transactions(flask_session['email'], full_sync=full)
+    email = flask_session['email']
+    try:
+        sync_user_transactions(email, full_sync=full)
+    except RefreshError as e:
+        app.logger.warning(f"OAuth token expired or revoked for {email}: {e}")
+        # Clean up the stale tokens
+        token_record = session.query(OAuthToken).filter_by(email=email).first()
+        if token_record:
+            session.delete(token_record)
+            session.commit()
+        # Redirect to re-authenticate
+        return redirect(url_for('login'))
     return redirect(url_for('show_transactions'))
 
 
