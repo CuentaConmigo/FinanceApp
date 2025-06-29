@@ -1373,10 +1373,10 @@ def insights():
     today = date.today()
     first_day_this_month = date(today.year, today.month, 1)
     last_month = first_day_this_month - timedelta(days=1)
-    target_month = last_month.month
-    target_year = last_month.year
-    #target_month = 1
-    #target_year = 2025
+    #target_month = last_month.month
+    #target_year = last_month.year
+    target_month = 12
+    target_year = 2024
     spanish_months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
