@@ -164,28 +164,33 @@ def logout():
 
 @app.route('/')
 def home():
-    if 'email' not in flask_session:
-        return render_template("onboarding.html")
+    try:
+        if 'email' not in flask_session:
+            return render_template("onboarding.html")
 
-    # Get the user's email
-    user_email = flask_session['email']
-    user = session.query(UserCharacteristic).filter_by(email=user_email).first()
+        # Get the user's email
+        user_email = flask_session['email']
+        user = session.query(UserCharacteristic).filter_by(email=user_email).first()
 
-    if not user or not user.onboarded:
-     return render_template("onboarding.html")
-
-
-    # Check if user exists and has completed the questionnaire
-    if not user or not (user.dob and user.income and user.region and user.name):  # Add more fields as needed
-        return redirect(url_for('questionnaire'))
+        if not user or not user.onboarded:
+            return render_template("onboarding.html")
 
 
-    # Count how many user IDs exist in the table
-    # Note: func.count() returns a numeric count of rows
-    num_users = session.query(func.count(UserCharacteristic.user_id)).scalar()
+        # Check if user exists and has completed the questionnaire
+        if not user or not (user.dob and user.income and user.region and user.name):  # Add more fields as needed
+            return redirect(url_for('questionnaire'))
 
-    return render_template('home.html', num_users=num_users, user=user)
 
+        # Count how many user IDs exist in the table
+        # Note: func.count() returns a numeric count of rows
+        num_users = session.query(func.count(UserCharacteristic.user_id)).scalar()
+
+        return render_template('home.html', num_users=num_users, user=user)
+    
+    except SQLAlchemyError as e:
+            session.rollback()
+            app.logger.error(f"SQLAlchemy error on /home: {e}")
+            return "A database error occurred. Please try again later.", 500
 
 @app.route('/sync')
 def sync():
