@@ -396,7 +396,7 @@ def show_transactions():
         "Educación": ["Colegiatura", "Libros", "Cursos", "Otros"],
         "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones", "Otros"],
         "Viajes": ["Pasajes","Hoteles", "Tours", "Otros"],
-        "Otro": [ "Regalos", "Otros"]
+        "Otro": [ "Regalos","Reembolsables", "Otros"]
     }
 
     # Get available years and months for dropdowns
@@ -473,7 +473,7 @@ def add_transaction():
         "Educación": ["Colegiatura", "Libros", "Cursos", "Otros"],
         "Bancos y Finanzas": ["Comisiones", "Préstamos", "Inversiones", "Otros"],
         "Viajes": ["Pasajes","Hoteles", "Tours", "Otros"],
-        "Otro": [ "Regalos", "Otros"]
+        "Otro": [ "Regalos","Reembolsables", "Otros"]
     }
 
     if request.method == 'POST':
